@@ -86,14 +86,16 @@ export function ChunkedWorld({ area, interactive = true, showObjects = true, sho
       {/* region ground (grass) */}
       <mesh
         rotation-x={-Math.PI / 2}
-        position={[(bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2]}
+        // 8 cm below every ground layer and subdivided: a single km-sized triangle loses
+        // depth precision after clipping and flickers through the paving above it.
+        position={[(bounds.minX + bounds.maxX) / 2, -0.08, (bounds.minZ + bounds.maxZ) / 2]}
         material={pavingMaterial(STYLE_V2.grass, STYLE_V2.grassDark, 3)}
         onClick={(e) => {
           if (e.delta > 4) return;
           onGroundClick?.([e.point.x, e.point.z]);
         }}
       >
-        <planeGeometry args={[w + 2000, d + 2000]} />
+        <planeGeometry args={[w + 2000, d + 2000, Math.ceil((w + 2000) / 250), Math.ceil((d + 2000) / 250)]} />
       </mesh>
       {[...builds.values()].map((b) => (
         <ChunkView key={b.key} build={b} interactive={interactive} showObjects={showObjects} showPins={showPins} />
