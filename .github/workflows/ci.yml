@@ -45,7 +45,7 @@ jobs:
       - name: Web typecheck
         run: pnpm --filter web typecheck
       - name: Web tests
-        run: pnpm --filter web test --if-present
+        run: pnpm --filter web test
       - name: Web build
         run: pnpm --filter web build
         env:
