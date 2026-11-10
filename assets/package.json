@@ -1,0 +1,17 @@
+{
+  "name": "@nmap/assets",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-assets.mjs",
+    "previews": "node scripts/render-previews.mjs"
+  },
+  "devDependencies": {
+    "three": "^0.170.0",
+    "@gltf-transform/core": "^4.1.1",
+    "@gltf-transform/extensions": "^4.1.1",
+    "@gltf-transform/functions": "^4.1.1",
+    "meshoptimizer": "^0.22.0"
+  }
+}

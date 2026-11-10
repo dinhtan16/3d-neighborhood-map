@@ -1,0 +1,73 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "db:migrate": "ts-node -T src/database/migrate.ts",
+    "db:seed": "ts-node -T src/database/seeds/seed.ts",
+    "export:static": "ts-node -T src/scripts/export-static.ts",
+    "test": "jest --runInBand",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": "test/.*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.test.json"
+        }
+      ]
+    },
+    "testEnvironment": "node",
+    "globalSetup": "<rootDir>/test/global-setup.ts",
+    "testTimeout": 30000,
+    "setupFiles": [
+      "<rootDir>/test/setup-env.ts"
+    ]
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.9",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.2.9",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-express": "^11.2.9",
+    "@nestjs/throttler": "^6.7.1",
+    "@nmap/geo-core": "workspace:*",
+    "@nmap/map-config": "workspace:*",
+    "@nmap/map-contracts": "workspace:*",
+    "@nmap/shared-types": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^18.0.10",
+    "multer": "^2.5.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.2.9",
+    "@types/express": "^5.0.6",
+    "@types/geojson": "^7946.0.16",
+    "@types/jest": "^30.0.0",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "jest": "^30.5.2",
+    "supertest": "^7.3.2",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,569 @@
+[
+  {
+    "assetKey": "shophouse-01",
+    "name": "Shophouse (2 floors)",
+    "category": "building",
+    "file": "models/shophouse-01.glb",
+    "boundingBox": {
+      "min": [
+        -2.35,
+        0,
+        -6.76
+      ],
+      "max": [
+        2.35,
+        9.236,
+        6.76
+      ],
+      "size": [
+        4.7,
+        9.236,
+        13.52
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 804,
+      "bytes": 31692,
+      "nodes": [
+        "Base",
+        "GroundFloor",
+        "Floor2",
+        "Balcony2",
+        "Windows2",
+        "Roof",
+        "RoofTank",
+        "Shopfront",
+        "Sign",
+        "Awning",
+        "Goods"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "shophouse-02",
+    "name": "Shophouse (3 floors)",
+    "category": "building",
+    "file": "models/shophouse-02.glb",
+    "boundingBox": {
+      "min": [
+        -2.35,
+        0,
+        -6.76
+      ],
+      "max": [
+        2.35,
+        12.636,
+        6.76
+      ],
+      "size": [
+        4.7,
+        12.636,
+        13.52
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 1108,
+      "bytes": 32904,
+      "nodes": [
+        "Base",
+        "GroundFloor",
+        "Floor2",
+        "Balcony2",
+        "Windows2",
+        "Floor3",
+        "Balcony3",
+        "Windows3",
+        "Roof",
+        "RoofTank",
+        "Shopfront",
+        "Sign",
+        "Awning",
+        "Goods"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "cafe-01",
+    "name": "Street Café",
+    "category": "shop",
+    "file": "models/cafe-01.glb",
+    "boundingBox": {
+      "min": [
+        -2.65,
+        0,
+        -4.625
+      ],
+      "max": [
+        2.65,
+        4.37,
+        4.625
+      ],
+      "size": [
+        5.3,
+        4.37,
+        9.25
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 1100,
+      "bytes": 34616,
+      "nodes": [
+        "Base",
+        "Building",
+        "Roof",
+        "Shopfront",
+        "Sign",
+        "Awning",
+        "Terrace",
+        "Umbrella",
+        "Planters",
+        "Menu"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "fruit-stall-01",
+    "name": "Fruit Market Stall",
+    "category": "stall",
+    "file": "models/fruit-stall-01.glb",
+    "boundingBox": {
+      "min": [
+        -1.55,
+        0,
+        -1.495
+      ],
+      "max": [
+        1.55,
+        2.9,
+        1.495
+      ],
+      "size": [
+        3.1,
+        2.9,
+        2.991
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 2992,
+      "bytes": 36940,
+      "nodes": [
+        "Table",
+        "Posts",
+        "Canopy",
+        "Crates",
+        "Fruit",
+        "Baskets"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "food-cart-01",
+    "name": "Street Food Cart",
+    "category": "stall",
+    "file": "models/food-cart-01.glb",
+    "boundingBox": {
+      "min": [
+        -1.215,
+        0,
+        -1
+      ],
+      "max": [
+        1.215,
+        2.68,
+        1
+      ],
+      "size": [
+        2.43,
+        2.68,
+        2
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 376,
+      "bytes": 18156,
+      "nodes": [
+        "Body",
+        "GlassCase",
+        "Pot",
+        "Wheels",
+        "Handle",
+        "Sign",
+        "Umbrella"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "awning-01",
+    "name": "Striped Awning",
+    "category": "decoration",
+    "file": "models/awning-01.glb",
+    "boundingBox": {
+      "min": [
+        -1.55,
+        0,
+        -0.729
+      ],
+      "max": [
+        1.55,
+        2.7,
+        0.729
+      ],
+      "size": [
+        3.1,
+        2.7,
+        1.457
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 180,
+      "bytes": 6060,
+      "nodes": [
+        "Frame",
+        "Canvas"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "table-set-01",
+    "name": "Table & Stools",
+    "category": "furniture",
+    "file": "models/table-set-01.glb",
+    "boundingBox": {
+      "min": [
+        -0.821,
+        0,
+        -0.83
+      ],
+      "max": [
+        0.821,
+        0.67,
+        0.83
+      ],
+      "size": [
+        1.642,
+        0.67,
+        1.66
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 280,
+      "bytes": 7044,
+      "nodes": [
+        "TableSet"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "tree-01",
+    "name": "Tropical Tree",
+    "category": "vegetation",
+    "file": "models/tree-01.glb",
+    "boundingBox": {
+      "min": [
+        -1.875,
+        0,
+        -1.5
+      ],
+      "max": [
+        1.875,
+        5.04,
+        1.5
+      ],
+      "size": [
+        3.75,
+        5.04,
+        3
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 376,
+      "bytes": 7596,
+      "nodes": [
+        "Trunk",
+        "Canopy"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "palm-01",
+    "name": "Palm Tree",
+    "category": "vegetation",
+    "file": "models/palm-01.glb",
+    "boundingBox": {
+      "min": [
+        -2.116,
+        0,
+        -2.116
+      ],
+      "max": [
+        2.116,
+        5.158,
+        2.116
+      ],
+      "size": [
+        4.232,
+        5.158,
+        4.232
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 392,
+      "bytes": 10812,
+      "nodes": [
+        "Trunk",
+        "Fronds",
+        "Coconuts"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "street-light-01",
+    "name": "Street Light",
+    "category": "street-furniture",
+    "file": "models/street-light-01.glb",
+    "boundingBox": {
+      "min": [
+        -0.22,
+        0,
+        -0.91
+      ],
+      "max": [
+        0.22,
+        6.45,
+        0.91
+      ],
+      "size": [
+        0.44,
+        6.45,
+        1.82
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 124,
+      "bytes": 6992,
+      "nodes": [
+        "Pole",
+        "Arm",
+        "Lamp"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "bench-01",
+    "name": "Park Bench",
+    "category": "street-furniture",
+    "file": "models/bench-01.glb",
+    "boundingBox": {
+      "min": [
+        -0.8,
+        0,
+        -0.262
+      ],
+      "max": [
+        0.8,
+        0.95,
+        0.262
+      ],
+      "size": [
+        1.6,
+        0.95,
+        0.524
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 132,
+      "bytes": 6116,
+      "nodes": [
+        "Seat",
+        "Back",
+        "Legs"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "scooter-01",
+    "name": "Scooter",
+    "category": "vehicle",
+    "file": "models/scooter-01.glb",
+    "boundingBox": {
+      "min": [
+        -0.31,
+        0,
+        -0.88
+      ],
+      "max": [
+        0.31,
+        1.16,
+        0.88
+      ],
+      "size": [
+        0.62,
+        1.16,
+        1.76
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 292,
+      "bytes": 12708,
+      "nodes": [
+        "Wheels",
+        "Body",
+        "Seat",
+        "Handlebar",
+        "Lights"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "bus-01",
+    "name": "City Bus",
+    "category": "vehicle",
+    "file": "models/bus-01.glb",
+    "boundingBox": {
+      "min": [
+        -1.292,
+        0,
+        -5.045
+      ],
+      "max": [
+        1.292,
+        3.358,
+        5.045
+      ],
+      "size": [
+        2.585,
+        3.358,
+        10.09
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 524,
+      "bytes": 16424,
+      "nodes": [
+        "Body",
+        "Roof",
+        "Windows",
+        "Door",
+        "Stripe",
+        "Lights",
+        "Sign",
+        "Wheels"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  },
+  {
+    "assetKey": "sign-01",
+    "name": "Street Sign",
+    "category": "street-furniture",
+    "file": "models/sign-01.glb",
+    "boundingBox": {
+      "min": [
+        -0.62,
+        0,
+        -0.072
+      ],
+      "max": [
+        0.62,
+        2.6,
+        0.072
+      ],
+      "size": [
+        1.24,
+        2.6,
+        0.145
+      ],
+      "origin": "base-center",
+      "forward": "+Z",
+      "units": "meters"
+    },
+    "metadata": {
+      "compressed": "EXT_meshopt_compression",
+      "triangles": 92,
+      "bytes": 5316,
+      "nodes": [
+        "Post",
+        "Board"
+      ],
+      "license": "CC0 – generated in-repo",
+      "author": "procedural generator (assets/scripts/build-assets.mjs)"
+    }
+  }
+]

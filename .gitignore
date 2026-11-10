@@ -10,3 +10,4 @@ __pycache__/
 storage/
 coverage/
 test-results/
+apps/web/dist-demo/

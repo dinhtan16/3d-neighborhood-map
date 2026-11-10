@@ -65,10 +65,10 @@ export const BUILDING_STYLE_COLORS: Record<string, { wall: string; roof: string;
 export const CAMERA_CONFIG = {
   type: 'orthographic' as const,
   position: [150, 180, 150] as [number, number, number],
-  zoom: 2.5,
+  zoom: 4.5,
   minZoom: 0.8,
   maxZoom: 8,
   minPolarAngle: 0.45,
   maxPolarAngle: 1.05,
-  flyToZoom: 5,
+  flyToZoom: 7,
 };
