@@ -42,7 +42,7 @@ export function PlaceLayer({ pins }: { pins: PlacePin[] }) {
           <group
             key={place.id}
             position={[x, PIN_HEIGHT + (selected ? 2 : 0), z]}
-            userData={{ boost: selected ? 1.35 : hovered ? 1.15 : 1 }}
+            userData={{ boost: selected ? 1.35 : hovered ? 1.15 : 1, placeId: place.id }}
             onPointerOver={(e) => {
               e.stopPropagation();
               setHover({ id: place.id, kind: 'place', label: place.name, sublabel: place.category?.name, position: [x, PIN_HEIGHT + 5, z] });

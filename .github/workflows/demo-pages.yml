@@ -1,7 +1,9 @@
 # Builds the backend-free static demo (apps/web/dist-demo) and deploys it to GitHub Pages.
 # Enable Pages once: Settings → Pages → Source: "GitHub Actions".
-# The scene data comes from apps/web/public/demo-data (committed output of
-# `pnpm --filter api export:static`), so this workflow needs no database.
+#
+# The demo data (~35 MB of chunk packs) is NOT committed. It is rebuilt here from the
+# committed, compressed import fixtures (services/map-importer/fixtures/region/*.gz):
+#   PostGIS service → migrate → seed → import OSM + Microsoft footprints → export:static → build:demo
 name: Deploy demo to GitHub Pages
 
 on:
@@ -21,6 +23,21 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neighborhood_map
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/neighborhood_map
+      ADMIN_EMAIL: ci@example.com
+      ADMIN_PASSWORD: ci-not-used
+      JWT_SECRET: ci-not-used-ci-not-used-ci-not-used
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,9 +45,28 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       - run: pnpm install --frozen-lockfile
+      - run: pip install -r services/map-importer/requirements.txt
       - run: pnpm build:packages
       - run: pnpm assets:build
+      - name: Create database schema and seed
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
+      - name: Import region (OSM + Microsoft building footprints)
+        run: |
+          python3 services/map-importer/src/main.py --area-slug chon-thanh-binh-long --source file \
+            --file services/map-importer/fixtures/region/osm-region.json.gz
+          python3 services/map-importer/src/main.py --area-slug chon-thanh-binh-long --source msbuildings \
+            --file services/map-importer/fixtures/region/ms-buildings-region.geojsonl.gz
+          # Re-run OSM (idempotent, ~2 s): places now inside a footprint drop their generated shop model.
+          python3 services/map-importer/src/main.py --area-slug chon-thanh-binh-long --source file \
+            --file services/map-importer/fixtures/region/osm-region.json.gz
+      - name: Export static chunk packs
+        run: pnpm --filter api export:static
       - name: Build static demo
         run: pnpm --filter web build:demo
       - uses: actions/configure-pages@v5

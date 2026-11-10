@@ -20,12 +20,13 @@ export type CameraCommandInput = DistributiveOmit<CameraCommand, 'nonce'>;
 interface MapState {
   selectedPlaceId: string | null;
   selectedBuildingId: string | null;
+  selectedBuildingInfo: { name: string | null; levels: number | null; height: number; source?: string } | null;
   hover: HoverInfo | null;
   /** Category slugs currently hidden (empty = show all). */
   hiddenCategories: string[];
   cameraCommand: CameraCommand | null;
   selectPlace: (id: string | null, opts?: { fly?: boolean }) => void;
-  selectBuilding: (id: string | null) => void;
+  selectBuilding: (id: string | null, info?: MapState['selectedBuildingInfo']) => void;
   setHover: (h: HoverInfo | null) => void;
   toggleCategory: (slug: string) => void;
   showOnlyCategory: (slug: string | null) => void;
@@ -38,12 +39,13 @@ let nonce = 0;
 export const useMapStore = create<MapState>((set) => ({
   selectedPlaceId: null,
   selectedBuildingId: null,
+  selectedBuildingInfo: null,
   hover: null,
   hiddenCategories: [],
   cameraCommand: null,
   pendingFly: false,
-  selectPlace: (id, opts) => set({ selectedPlaceId: id, selectedBuildingId: null, pendingFly: !!(id && opts?.fly) }),
-  selectBuilding: (id) => set({ selectedBuildingId: id }),
+  selectPlace: (id, opts) => set({ selectedPlaceId: id, selectedBuildingId: null, selectedBuildingInfo: null, pendingFly: !!(id && opts?.fly) }),
+  selectBuilding: (id, info) => set({ selectedBuildingId: id, selectedBuildingInfo: id ? info ?? null : null }),
   setHover: (hover) => set((s) => (s.hover?.id === hover?.id ? s : { hover })),
   toggleCategory: (slug) =>
     set((s) => ({

@@ -4,7 +4,6 @@ import type {
   LoginResponse, MapAreaDto, MapAssetDto, MapObjectDto, MapSceneDto, MapSceneMeta,
   PlaceCategoryDto, PlaceDetailDto, PlaceImageDto, PlaceSummaryDto, UpdateMapObjectRequest, UpdatePlaceRequest,
 } from '@nmap/map-contracts';
-import type { StaticDemoBundle } from '@/types/map';
 import { foldText } from '@/lib/text';
 
 export const DATA_MODE: 'api' | 'static' =
@@ -54,67 +53,100 @@ const qs = (params: Record<string, unknown>) => {
   return s.toString();
 };
 
-// ---------------- static demo bundle ----------------
-let bundlePromise: Promise<StaticDemoBundle> | null = null;
-function loadBundle(slug = 'chon-thanh'): Promise<StaticDemoBundle> {
-  bundlePromise ??= fetch(`demo-data/${slug}.json`).then(async (r) => {
-    if (!r.ok) throw new ApiError(r.status, 'Demo data not found');
-    const b = (await r.json()) as StaticDemoBundle;
-    // Model paths in the bundle are relative to the demo-data folder.
-    // NEXT_PUBLIC_EMBED_MODELS=1 => models come base64-packed in demo-data/models.json
-    // (for hosts that cannot serve .glb files).
-    const embed = process.env.NEXT_PUBLIC_EMBED_MODELS === '1';
-    const fix = (u: string) =>
-      /^(https?:|data:|\/)/.test(u) ? u
-        : embed ? `embedded:${u.split('/').pop()!.replace(/\.glb$/, '')}`
-        : `demo-data/${u}`;
-    b.assets = b.assets.map((a) => ({ ...a, modelUrl: fix(a.modelUrl), thumbnailUrl: null }));
-    b.scene.objects = b.scene.objects.map((o) => ({ ...o, modelUrl: fix(o.modelUrl) }));
-    return b;
-  });
-  return bundlePromise;
+// ---------------- static demo (chunk packs) ----------------
+import type { MapChunkDto, StaticAreaIndex, StaticChunkPack } from '@nmap/map-contracts';
+import { CHUNK_SIZE_M, DEFAULT_AREA_SLUG, PACK_SPAN } from '@nmap/map-config';
+import { createProjector } from '@nmap/geo-core';
+
+const indexCache = new Map<string, Promise<StaticAreaIndex>>();
+const packCache = new Map<string, Promise<StaticChunkPack | null>>();
+const embed = process.env.NEXT_PUBLIC_EMBED_MODELS === '1';
+/** Model paths in static data are relative to demo-data/ (or embedded for hosts without .glb support). */
+const fixModelUrl = (u: string) =>
+  /^(https?:|data:|\/)/.test(u) ? u
+    : embed ? `embedded:${u.split('/').pop()!.replace(/\.glb$/, '')}`
+    : `demo-data/${u}`;
+
+function staticIndex(slug: string = DEFAULT_AREA_SLUG): Promise<StaticAreaIndex> {
+  let p = indexCache.get(slug);
+  if (!p) {
+    p = fetch(`demo-data/${slug}/area.json`).then(async (r) => {
+      if (!r.ok) throw new ApiError(r.status, 'Demo data not found');
+      const idx = (await r.json()) as StaticAreaIndex;
+      idx.assets = idx.assets.map((a) => ({ ...a, modelUrl: fixModelUrl(a.modelUrl), thumbnailUrl: null }));
+      return idx;
+    });
+    indexCache.set(slug, p);
+  }
+  return p;
+}
+
+function staticPack(slug: string, px: number, pz: number): Promise<StaticChunkPack | null> {
+  const key = `${slug}|${px}_${pz}`;
+  let p = packCache.get(key);
+  if (!p) {
+    p = staticIndex(slug).then(async (idx) => {
+      if (!idx.packs.includes(`${px}_${pz}`)) return null;
+      const r = await fetch(`demo-data/${slug}/packs/p_${px}_${pz}.json`);
+      if (!r.ok) throw new ApiError(r.status, `Pack ${px}_${pz} missing`);
+      const pack = (await r.json()) as StaticChunkPack;
+      for (const c of Object.values(pack.chunks)) c.objects = c.objects.map((o) => ({ ...o, modelUrl: fixModelUrl(o.modelUrl) }));
+      return pack;
+    });
+    packCache.set(key, p);
+  }
+  return p;
+}
+
+function emptyChunk(cx: number, cz: number): MapChunkDto {
+  return { chunk: { cx, cz, sizeM: CHUNK_SIZE_M, bounds: { minLng: 0, minLat: 0, maxLng: 0, maxLat: 0 } }, features: { type: 'FeatureCollection', features: [] }, objects: [], places: [] };
 }
 
 // ---------------- public API ----------------
 export async function fetchArea(slug: string): Promise<MapAreaDto> {
-  if (IS_STATIC) return (await loadBundle(slug)).area;
+  if (IS_STATIC) return (await staticIndex(slug)).area;
   return (await request<MapAreaDto>(`/map/areas/${encodeURIComponent(slug)}`)).data;
 }
 
 export async function fetchAreas(): Promise<MapAreaDto[]> {
-  if (IS_STATIC) return [(await loadBundle()).area];
+  if (IS_STATIC) return [(await staticIndex()).area];
   return (await request<MapAreaDto[]>('/map/areas')).data;
+}
+
+export async function fetchChunk(area: Pick<MapAreaDto, 'id' | 'slug'>, cx: number, cz: number): Promise<MapChunkDto> {
+  if (IS_STATIC) {
+    const pack = await staticPack(area.slug, Math.floor(cx / PACK_SPAN), Math.floor(cz / PACK_SPAN));
+    return pack?.chunks[`${cx}_${cz}`] ?? emptyChunk(cx, cz);
+  }
+  return (await request<MapChunkDto>(`/map/areas/${area.id}/chunks/${cx}/${cz}?lod=2`)).data;
 }
 
 export async function fetchScene(
   areaId: string, bounds: GeoBounds, lod = 2, includeDrafts = false,
 ): Promise<{ data: MapSceneDto; meta: MapSceneMeta }> {
-  if (IS_STATIC) {
-    const b = await loadBundle();
-    return {
-      data: b.scene,
-      meta: { areaId, lod, featureCount: b.scene.features.features.length, objectCount: b.scene.objects.length, placeCount: b.scene.places.length },
-    };
-  }
   const res = await request<MapSceneDto>(`/map/scene?${qs({ areaId, ...bounds, lod, includeDrafts: includeDrafts || undefined })}`);
   return { data: res.data, meta: res.meta as unknown as MapSceneMeta };
 }
 
+export async function fetchMapObjects(areaId: string, bounds: GeoBounds, includeDrafts = true): Promise<MapObjectDto[]> {
+  return (await request<MapObjectDto[]>(`/map/objects?${qs({ areaId, ...bounds, includeDrafts: includeDrafts || undefined })}`)).data;
+}
+
 export async function fetchCategories(): Promise<PlaceCategoryDto[]> {
-  if (IS_STATIC) return (await loadBundle()).categories;
+  if (IS_STATIC) return (await staticIndex()).categories;
   return (await request<PlaceCategoryDto[]>('/categories')).data;
 }
 
 export async function fetchAssets(): Promise<MapAssetDto[]> {
-  if (IS_STATIC) return (await loadBundle()).assets;
+  if (IS_STATIC) return (await staticIndex()).assets;
   return (await request<MapAssetDto[]>('/map/assets')).data;
 }
 
 export async function searchPlaces(params: { q?: string; categoryId?: string; areaId?: string; limit?: number; status?: string }): Promise<PlaceSummaryDto[]> {
   if (IS_STATIC) {
-    const b = await loadBundle();
+    const idx = await staticIndex();
     const q = params.q ? foldText(params.q.trim()) : '';
-    return b.scene.places
+    return idx.places
       .filter((p) => (!params.categoryId || p.category?.id === params.categoryId))
       .filter((p) => !q || foldText(`${p.name} ${p.address ?? ''}`).includes(q))
       .slice(0, params.limit ?? 50);
@@ -124,9 +156,15 @@ export async function searchPlaces(params: { q?: string; categoryId?: string; ar
 
 export async function fetchPlace(id: string): Promise<PlaceDetailDto> {
   if (IS_STATIC) {
-    const p = (await loadBundle()).placeDetails[id];
-    if (!p) throw new ApiError(404, 'Place not found');
-    return p;
+    const idx = await staticIndex();
+    const summary = idx.places.find((p) => p.id === id);
+    if (!summary) throw new ApiError(404, 'Place not found');
+    const proj = createProjector(idx.area.crs, idx.area.origin);
+    const [x, z] = proj.toLocal(summary.location.lng, summary.location.lat);
+    const cx = Math.floor(x / CHUNK_SIZE_M), cz = Math.floor(z / CHUNK_SIZE_M);
+    const pack = await staticPack(idx.area.slug, Math.floor(cx / PACK_SPAN), Math.floor(cz / PACK_SPAN));
+    const detail = pack?.placeDetails[id];
+    return detail ?? { ...summary, description: null, phone: null, openingHours: null, images: [], source: 'osm', objectIds: [] };
   }
   return (await request<PlaceDetailDto>(`/places/${id}`)).data;
 }

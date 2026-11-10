@@ -183,7 +183,7 @@ function mulberry32(seed: number) {
 }
 
 /** Uniform grid of road segments for fast "is this point on a road?" checks. */
-class SegmentIndex {
+export class SegmentIndex {
   private cells = new Map<string, { a: LocalPoint; b: LocalPoint; r: number }[]>();
   constructor(private size = 20) {}
   private key(cx: number, cz: number) { return `${cx},${cz}`; }
@@ -197,6 +197,14 @@ class SegmentIndex {
       if (!c) this.cells.set(k, (c = []));
       c.push({ a, b, r });
     }
+  }
+  /** Distance from p to the nearest carriageway edge (centre distance − half width). */
+  edgeDistance(p: LocalPoint): number {
+    const c = this.cells.get(this.key(Math.floor(p[0] / this.size), Math.floor(p[1] / this.size)));
+    if (!c) return Infinity;
+    let best = Infinity;
+    for (const { a, b, r } of c) best = Math.min(best, distToSegment(p, a, b) - r);
+    return best;
   }
   clear(p: LocalPoint, margin: number): boolean {
     const c = this.cells.get(this.key(Math.floor(p[0] / this.size), Math.floor(p[1] / this.size)));
@@ -222,6 +230,7 @@ export function planStreetDecoration(
   extraTrees: LocalPoint[],
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
   maxTrees = 1600,
+  blocked: (p: LocalPoint) => boolean = () => false,
 ) {
   const index = new SegmentIndex();
   for (const c of centerlines) {
@@ -230,7 +239,7 @@ export function planStreetDecoration(
   const rand = mulberry32(1337);
   const inside = (p: LocalPoint) => p[0] > bounds.minX && p[0] < bounds.maxX && p[1] > bounds.minZ && p[1] < bounds.maxZ;
   const free = (p: LocalPoint, margin: number) =>
-    inside(p) && index.clear(p, margin) && avoid.every((o) => Math.hypot(o.x - p[0], o.z - p[1]) > o.r);
+    inside(p) && index.clear(p, margin) && !blocked(p) && avoid.every((o) => Math.hypot(o.x - p[0], o.z - p[1]) > o.r);
 
   const trees: DecorationInstance[] = [];
   const lamps: DecorationInstance[] = [];
@@ -250,6 +259,7 @@ export function planStreetDecoration(
     if (major) {
       for (const side of [1, -1]) {
         for (const s of samplesAlong(c.points, 32, side * (c.halfWidth + 0.6), side > 0 ? 8 : 24)) {
+          if (!inside(s.point)) continue;
           lamps.push({ x: s.point[0], z: s.point[1], rotation: s.heading + (side > 0 ? Math.PI / 2 : -Math.PI / 2), scale: 1, variant: 0 });
         }
       }
@@ -266,5 +276,5 @@ export function planStreetDecoration(
       }
     }
   }
-  return { trees, lamps };
+  return { trees, lamps, index };
 }

@@ -4,13 +4,36 @@ import { Client } from 'pg';
 import { CATEGORIES } from '@nmap/map-config';
 import { readConfig, REPO_ROOT } from '../../config/env';
 
-export const DEFAULT_AREA = {
+interface AreaSeed {
+  slug: string;
+  name: string;
+  bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number };
+  crs: string;
+  origin: { lat: number; lng: number };
+  isActive: boolean;
+}
+
+/** v2 region: the QL13 corridor Chơn Thành – Minh Hưng – Bình Long (one origin => seamless streaming). */
+export const DEFAULT_AREA: AreaSeed = {
+  slug: 'chon-thanh-binh-long',
+  name: 'Chơn Thành – Minh Hưng – Bình Long',
+  bounds: { minLng: 106.555, minLat: 11.37, maxLng: 106.69, maxLat: 11.7 },
+  crs: 'EPSG:32648',
+  origin: { lat: 11.535, lng: 106.6225 },
+  isActive: true,
+};
+
+/** v1 neighbourhood, kept for history but no longer served. */
+export const LEGACY_AREA: AreaSeed = {
   slug: 'chon-thanh',
   name: 'Chơn Thành – Trung tâm',
   bounds: { minLng: 106.599, minLat: 11.416, maxLng: 106.613, maxLat: 11.428 },
   crs: 'EPSG:32648',
   origin: { lat: 11.422, lng: 106.606 },
+  isActive: false,
 };
+
+export const AREAS: AreaSeed[] = [DEFAULT_AREA, LEGACY_AREA];
 
 interface ManifestEntry {
   assetKey: string;
@@ -41,15 +64,16 @@ export async function runSeed(databaseUrl: string, log: (m: string) => void = co
     }
     log(`Seeded ${CATEGORIES.length} categories`);
 
-    const a = DEFAULT_AREA;
-    await client.query(
-      `INSERT INTO map_areas(name, slug, boundary, crs, origin_lat, origin_lng, is_active)
-       VALUES ($1,$2, ST_Multi(ST_MakeEnvelope($3,$4,$5,$6,4326)), $7, $8, $9, TRUE)
-       ON CONFLICT (slug) DO UPDATE SET name=EXCLUDED.name, boundary=EXCLUDED.boundary, crs=EXCLUDED.crs,
-         origin_lat=EXCLUDED.origin_lat, origin_lng=EXCLUDED.origin_lng`,
-      [a.name, a.slug, a.bounds.minLng, a.bounds.minLat, a.bounds.maxLng, a.bounds.maxLat, a.crs, a.origin.lat, a.origin.lng],
-    );
-    log(`Seeded area "${a.slug}"`);
+    for (const a of AREAS) {
+      await client.query(
+        `INSERT INTO map_areas(name, slug, boundary, crs, origin_lat, origin_lng, is_active)
+         VALUES ($1,$2, ST_Multi(ST_MakeEnvelope($3,$4,$5,$6,4326)), $7, $8, $9, $10)
+         ON CONFLICT (slug) DO UPDATE SET name=EXCLUDED.name, boundary=EXCLUDED.boundary, crs=EXCLUDED.crs,
+           origin_lat=EXCLUDED.origin_lat, origin_lng=EXCLUDED.origin_lng, is_active=EXCLUDED.is_active`,
+        [a.name, a.slug, a.bounds.minLng, a.bounds.minLat, a.bounds.maxLng, a.bounds.maxLat, a.crs, a.origin.lat, a.origin.lng, a.isActive],
+      );
+      log(`Seeded area "${a.slug}"${a.isActive ? '' : ' (inactive)'}`);
+    }
 
     if (fs.existsSync(MANIFEST_PATH)) {
       const manifest: ManifestEntry[] = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));

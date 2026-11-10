@@ -77,3 +77,12 @@ WHERE deleted_at IS NULL AND ST_DWithin(location, ST_MakePoint(106.606, 11.422):
 -- Diacritic-insensitive search
 SELECT name FROM places WHERE f_unaccent(lower(name)) LIKE '%' || f_unaccent(lower('tap hoa')) || '%';
 ```
+
+## Migration 002 – region sources
+
+- `map_features.source` now also accepts `'microsoft'` (Microsoft Global ML Building Footprints).
+- `map_features.centroid GEOMETRY(Point, 4326)` – generated, stored `ST_PointOnSurface(geometry)` with a
+  GIST index. The chunk endpoint assigns buildings to exactly one 500 m chunk by this point.
+- Extra indexes: `(area_id, feature_type)`, `(area_id, source)`.
+- New feature types written by the importer: `landuse` (kind = landuse / natural value) and
+  `water` lines for rivers, streams and canals.

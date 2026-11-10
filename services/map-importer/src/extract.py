@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 import geometry as geo
 import normalize as norm
+from config import WATERWAY_LINE_KINDS
 
 
 @dataclass
@@ -110,7 +111,8 @@ def extract(elements: list[dict]) -> Extraction:
         geom = None
         if cls:
             ftype, kind = cls
-            geom = geo.way_geometry(index, way, as_area=ftype != "road")
+            as_area = ftype not in ("road",) and not (ftype == "water" and tags.get("waterway") in WATERWAY_LINE_KINDS)
+            geom = geo.way_geometry(index, way, as_area=as_area)
             if geom is None:
                 s["skipped_invalid_geometry"] += 1
             else:

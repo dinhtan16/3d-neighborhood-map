@@ -36,6 +36,7 @@ export function toFeature(r: any): MapFeature {
       roofShape: n.roofShape ?? tags['roof:shape'] ?? null,
       kind: n.kind ?? null,
       layer: num(n.layer ?? tags.layer),
-    },
+      ...(n.estimated || n.heightEstimated ? { estimated: true } : {}),
+    } as MapFeature['properties'],
   };
 }

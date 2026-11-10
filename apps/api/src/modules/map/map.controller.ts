@@ -1,6 +1,7 @@
-import { Controller, ForbiddenException, Get, Param, ParseUUIDPipe, Query, Req } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Query, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { MapService } from './map.service';
-import { ObjectsQueryDto, SceneQueryDto } from './dto/scene-query.dto';
+import { ChunkQueryDto, ObjectsQueryDto, SceneQueryDto } from './dto/scene-query.dto';
 import { MapObjectsService } from '../map-objects/map-objects.service';
 import { OptionalJwtService } from '../../common/guards/jwt-auth.guard';
 import { assertValidBounds } from '../../common/utils/bounds';
@@ -22,6 +23,23 @@ export class MapController {
   @Get('areas/:idOrSlug')
   getArea(@Param('idOrSlug') idOrSlug: string) {
     return this.map.getArea(idOrSlug.slice(0, 255));
+  }
+
+  /**
+   * Streaming chunk (CHUNK_SIZE_M square in the area's local metric frame).
+   * Buildings / objects / places are assigned to exactly one chunk; roads and
+   * areas appear in every chunk they intersect. Cacheable for 5 minutes.
+   */
+  @Get('areas/:areaId/chunks/:cx/:cz')
+  @Header('Cache-Control', 'public, max-age=300')
+  @Throttle({ default: { limit: 900, ttl: 60_000 } })
+  chunk(
+    @Param('areaId') areaId: string,
+    @Param('cx', ParseIntPipe) cx: number,
+    @Param('cz', ParseIntPipe) cz: number,
+    @Query() q: ChunkQueryDto,
+  ) {
+    return this.map.getChunk(areaId.slice(0, 255), cx, cz, q.lod ?? 2);
   }
 
   @Get('scene')

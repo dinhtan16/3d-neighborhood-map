@@ -30,7 +30,8 @@ Error envelope (NestJS default):
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/map/areas` | Active areas with `bounds`, `crs`, `origin`, `boundary`. |
-| GET | `/map/areas/:idOrSlug` | One area by UUID or slug (e.g. `chon-thanh`). |
+| GET | `/map/areas/:idOrSlug` | One area by UUID or slug (e.g. `chon-thanh-binh-long`). |
+| GET | `/map/areas/:idOrSlug/chunks/:cx/:cz` | **Streaming chunk** (500 m square, see below). Optional `lod`. `Cache-Control: public, max-age=300`; throttled at 900 req/min. |
 | GET | `/map/scene` | **Main rendering endpoint.** Query: `areaId` (UUID), `minLng`, `minLat`, `maxLng`, `maxLat`, optional `lod` (0–3), `includeDrafts` (admin only). Returns `{ features: FeatureCollection, objects: MapObject[], places: PlaceSummary[] }` and `meta { areaId, lod, featureCount, objectCount, placeCount }`. Geometry is GeoJSON EPSG:4326; lower LOD = simplified geometry. Bbox ordering, ranges and max area are validated. |
 | GET | `/map/features/:id` | One feature (GeoJSON Feature). |
 | GET | `/map/objects` | Objects by `areaId` + bounds. |
@@ -42,6 +43,38 @@ Example:
 GET /api/v1/map/scene?areaId=<uuid>&minLng=106.599&minLat=11.416&maxLng=106.613&maxLat=11.428&lod=2
 ```
 
+### Chunks
+
+The area is divided into `CHUNK_SIZE_M = 500` m squares in its local metric frame
+(projected CRS minus the area origin; x = east, z = −north). Chunk `(cx, cz)` covers
+`x ∈ [cx·500, (cx+1)·500)` and `z ∈ [cz·500, (cz+1)·500)`.
+
+```http
+GET /api/v1/map/areas/chon-thanh-binh-long/chunks/-4/-27
+```
+
+```json
+{
+  "data": {
+    "chunk": { "cx": -4, "cz": -27, "sizeM": 500,
+               "bounds": { "minLng": 106.6048, "minLat": 11.6526, "maxLng": 106.6094, "maxLat": 11.6571 } },
+    "features": { "type": "FeatureCollection", "features": [] },
+    "objects": [],
+    "places": []
+  },
+  "meta": { "areaId": "uuid", "cx": -4, "cz": -27, "lod": 2, "featureCount": 475, "objectCount": 3, "placeCount": 2, "timestamp": "…" }
+}
+```
+
+- Buildings, places and objects belong to exactly one chunk: the one containing their
+  centroid / point (half-open intervals, so nothing is duplicated).
+- Roads, landuse, water and parks are returned by every chunk they intersect
+  (unclipped). Clients should de-duplicate by `properties.id` if they merge chunks.
+- Only published objects and active places are included.
+- Out-of-range indices → `400` with the valid range in the message; unknown area → `404`.
+- Up to 25 000 features per chunk. Coordinates have 6 decimals (~0.1 m). Responses are
+  gzip-compressed (a dense Bình Long chunk is ~270 KB of JSON, ~40 KB on the wire).
+
 Feature properties (normalized for rendering):
 
 ```json
@@ -49,6 +82,11 @@ Feature properties (normalized for rendering):
   "height": null, "levels": null, "styleKey": null,
   "name": "Đường Nguyễn Huệ", "highway": "residential", "widthM": 6 }
 ```
+
+Microsoft ML footprints have `"source": "microsoft"`, `"sourceId": "ms:<16 hex>"`,
+estimated `height` / `levels`, `kind` (`house`, `industrial` or absent) and `"estimated": true`.
+Other feature types: `building`, `road`, `park`, `public_space`, `landuse`
+(kind = landuse / natural value), `water` (areas, or lines for rivers / streams / canals), `tree`.
 
 ## Categories
 

@@ -4,9 +4,9 @@ import '../src/app/globals.css';
 import { MapPage } from '@/features/map/MapPage';
 import MapCanvas from '@/components/map/MapCanvas';
 
-// Static, read-only demo: data from demo-data/chon-thanh.json (exported from PostGIS).
+// Static, read-only demo: data from demo-data/<area>/area.json + chunk packs (exported from PostGIS).
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MapPage areaSlug="chon-thanh" Canvas={MapCanvas} adminHref={null} />
+    <MapPage Canvas={MapCanvas} adminHref={null} />
   </StrictMode>,
 );

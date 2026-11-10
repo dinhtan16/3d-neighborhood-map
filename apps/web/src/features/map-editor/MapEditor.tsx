@@ -2,10 +2,12 @@
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import type { MapAssetDto, MapObjectDto, PlaceSummaryDto } from '@nmap/map-contracts';
 import { normalizeAngle } from '@nmap/geo-core';
-import { useMapScene } from '@/hooks/useMapScene';
+import { DEFAULT_AREA_SLUG } from '@nmap/map-config';
+import type { MapAreaDto } from '@nmap/map-contracts';
+import { worldFocus } from '@/components/map/ChunkedWorld';
 import { projectorForArea } from '@/lib/geo/projection';
 import {
-  createMapObject, deleteMapObject, fetchAssets, publishArea, searchPlaces, updateMapObject,
+  createMapObject, deleteMapObject, fetchArea, fetchAssets, fetchMapObjects, publishArea, searchPlaces, updateMapObject,
 } from '@/lib/api/client';
 import type { MapCanvasProps } from '@/components/map/MapCanvas';
 import { MapLoading } from '@/components/map/MapLoading';
@@ -15,8 +17,10 @@ import { EditableObjects, type GizmoMode } from './EditableObjects';
 const deg = (r: number) => Math.round((normalizeAngle(r) * 180) / Math.PI * 10) / 10;
 const rad = (d: number) => (d * Math.PI) / 180;
 
-export function MapEditor({ Canvas, areaSlug = 'chon-thanh', initialPlaceId }: { Canvas: ComponentType<MapCanvasProps>; areaSlug?: string; initialPlaceId?: string | null }) {
-  const { area, scene, error } = useMapScene(areaSlug, { includeDrafts: true });
+export function MapEditor({ Canvas, areaSlug = DEFAULT_AREA_SLUG, initialPlaceId }: { Canvas: ComponentType<MapCanvasProps>; areaSlug?: string; initialPlaceId?: string | null }) {
+  const [area, setArea] = useState<MapAreaDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loadedAt, setLoadedAt] = useState<[number, number] | null>(null);
   const [assets, setAssets] = useState<MapAssetDto[]>([]);
   const [places, setPlaces] = useState<PlaceSummaryDto[]>([]);
   const [objects, setObjects] = useState<MapObjectDto[]>([]);
@@ -28,13 +32,29 @@ export function MapEditor({ Canvas, areaSlug = 'chon-thanh', initialPlaceId }: {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => { fetchAssets().then(setAssets).catch((e) => setMsg({ kind: 'err', text: e.message })); }, []);
-  useEffect(() => { if (scene) setObjects(scene.objects); }, [scene]);
+  useEffect(() => { fetchArea(areaSlug).then(setArea).catch((e) => setError(e.message)); }, [areaSlug]);
   useEffect(() => { if (area) searchPlaces({ areaId: area.id, limit: 50 }).then(setPlaces); }, [area]);
+
+  // Load editable objects (incl. drafts) around the view; refresh when the view moves > 400 m.
+  useEffect(() => {
+    if (!area) return;
+    const proj = projectorForArea(area);
+    const tick = () => {
+      if (loadedAt && Math.hypot(worldFocus.x - loadedAt[0], worldFocus.z - loadedAt[1]) < 400) return;
+      const c = proj.toGeo(worldFocus.x, worldFocus.z);
+      const d = 0.008; // ~900 m
+      fetchMapObjects(area.id, { minLng: c.lng - d, minLat: c.lat - d, maxLng: c.lng + d, maxLat: c.lat + d })
+        .then((list) => { setObjects(list); setLoadedAt([worldFocus.x, worldFocus.z]); })
+        .catch((e) => setMsg({ kind: 'err', text: e.message }));
+    };
+    tick();
+    const id = setInterval(tick, 2000);
+    return () => clearInterval(id);
+  }, [area, loadedAt]);
 
   const projector = useMemo(() => (area ? projectorForArea(area) : null), [area]);
   const selected = objects.find((o) => o.id === selectedId) ?? null;
   const drafts = objects.filter((o) => o.status === 'draft').length;
-  const sceneForCanvas = useMemo(() => (scene ? { ...scene, objects: [] } : null), [scene]);
 
   const replace = (o: MapObjectDto) => setObjects((list) => list.map((x) => (x.id === o.id ? o : x)));
   const fail = (e: unknown) => setMsg({ kind: 'err', text: (e as Error).message });
@@ -62,7 +82,7 @@ export function MapEditor({ Canvas, areaSlug = 'chon-thanh', initialPlaceId }: {
     } catch (e) { fail(e); }
   };
 
-  if (!area || !sceneForCanvas) return <div style={{ position: 'relative', height: '60vh' }}><MapLoading error={error} /></div>;
+  if (!area) return <div style={{ position: 'relative', height: '60vh' }}><MapLoading error={error} /></div>;
 
   return (
     <div className="editor">
@@ -87,7 +107,7 @@ export function MapEditor({ Canvas, areaSlug = 'chon-thanh', initialPlaceId }: {
       </aside>
 
       <div style={{ position: 'relative', minHeight: 0 }}>
-        <Canvas area={area} scene={sceneForCanvas} hideObjects showPins={preview} onGroundClick={placeAt}>
+        <Canvas area={area} showObjects={false} showPins={preview} onGroundClick={placeAt}>
           <EditableObjects
             area={area}
             objects={objects}

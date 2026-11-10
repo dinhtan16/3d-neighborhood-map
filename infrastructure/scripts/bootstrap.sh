@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-shot local setup: dependencies, shared packages, database, assets and the
-# Chơn Thành OSM import (from the committed fixture, so it works offline).
+# Chơn Thành – Minh Hưng – Bình Long region import (from the committed fixtures, so it works offline).
 #
 #   ./infrastructure/scripts/bootstrap.sh            # uses the fixture
 #   OSM_SOURCE=osm-api ./infrastructure/scripts/bootstrap.sh   # live OSM API
@@ -35,14 +35,14 @@ echo "==> Migrating and seeding the database"
 pnpm db:migrate
 pnpm db:seed
 
-SOURCE="${OSM_SOURCE:-file}"
-echo "==> Importing OSM data for chon-thanh (source: $SOURCE)"
-if [ "$SOURCE" = "file" ]; then
-  python3 services/map-importer/src/main.py --area-slug chon-thanh --source file \
-    --file services/map-importer/fixtures/chon-thanh-center.osm.json
-else
-  python3 services/map-importer/src/main.py --area-slug chon-thanh --source "$SOURCE"
-fi
+AREA=chon-thanh-binh-long
+FIX=services/map-importer/fixtures/region
+echo "==> Importing the region ($AREA) from the committed fixtures"
+# 1) OSM roads / buildings / landuse / places  2) Microsoft ML building footprints
+# 3) OSM again (idempotent): places that now sit inside a footprint drop their generated shop model.
+python3 services/map-importer/src/main.py --area-slug "$AREA" --source file --file "$FIX/osm-region.json.gz"
+python3 services/map-importer/src/main.py --area-slug "$AREA" --source msbuildings --file "$FIX/ms-buildings-region.geojsonl.gz"
+python3 services/map-importer/src/main.py --area-slug "$AREA" --source file --file "$FIX/osm-region.json.gz"
 
 cat <<MSG
 

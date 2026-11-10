@@ -2,89 +2,83 @@
 import { Suspense, useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { CAMERA_CONFIG, PALETTE } from '@nmap/map-config';
-import type { MapAreaDto, MapSceneDto } from '@nmap/map-contracts';
+import { OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
+import { CAMERA_CONFIG, FPS_CONFIG, STYLE_V2, TOWNS } from '@nmap/map-config';
+import type { MapAreaDto } from '@nmap/map-contracts';
 import { projectorForArea } from '@/lib/geo/projection';
 import { areaLocalBounds } from '@/lib/geo/coordinates';
 import { useMapStore } from '@/features/map/store';
-import { MapScene, type MapSceneProps } from './MapScene';
+import { ChunkedWorld, worldFocus } from './ChunkedWorld';
 import { MapCamera } from './MapCamera';
+import { FirstPersonController } from './FirstPersonController';
+import { OutlinePass } from './OutlinePass';
+import { AgentsLayer } from './AgentsLayer';
 import { HoverManager } from './interaction/HoverManager';
 import { ObjectPicker } from './interaction/ObjectPicker';
 
-export interface MapCanvasProps extends Omit<MapSceneProps, 'area' | 'scene'> {
+export interface MapCanvasProps {
   area: MapAreaDto;
-  scene: MapSceneDto;
-  controlsEnabled?: boolean;
+  mode?: 'iso' | 'fps';
+  showObjects?: boolean;
+  showPins?: boolean;
+  outlines?: boolean;
+  /** Animated pedestrians, scooters, cars and dogs. */
+  agents?: boolean;
+  onGroundClick?: (point: [number, number]) => void;
+  children?: React.ReactNode;
 }
 
-function Lighting({ bounds }: { bounds: { minX: number; maxX: number; minZ: number; maxZ: number } }) {
-  const half = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ) / 2 + 50;
-  const cx = (bounds.minX + bounds.maxX) / 2;
-  const cz = (bounds.minZ + bounds.maxZ) / 2;
-  const target = useMemo(() => { const o = new THREE.Object3D(); o.position.set(cx, 0, cz); return o; }, [cx, cz]);
-  return (
-    <>
-      <ambientLight intensity={1.15} color="#fff4e6" />
-      <hemisphereLight args={['#fff6e8', '#b9c99a', 0.55]} />
-      <primitive object={target} />
-      <directionalLight
-        position={[cx - 260, 420, cz + 180]}
-        target={target}
-        intensity={1.9}
-        color="#fff1dc"
-        castShadow
-        shadow-mapSize={[4096, 4096]}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.4}
-        shadow-radius={4}
-        shadow-camera-left={-half}
-        shadow-camera-right={half}
-        shadow-camera-top={half}
-        shadow-camera-bottom={-half}
-        shadow-camera-near={10}
-        shadow-camera-far={1600}
-      />
-    </>
-  );
-}
-
-/** WebGL map canvas. Must be loaded client-side only (dynamic import, ssr: false). */
-export default function MapCanvas({ area, scene, controlsEnabled = true, ...rest }: MapCanvasProps) {
+/** WebGL map canvas (client-only). Streams chunks around the active camera rig. */
+export default function MapCanvas({ area, mode = 'iso', showObjects = true, showPins = true, outlines = true, agents = true, onGroundClick, children }: MapCanvasProps) {
   const projector = useMemo(() => projectorForArea(area), [area]);
   const bounds = useMemo(() => areaLocalBounds(projector, area), [projector, area]);
   const selectPlace = useMapStore((s) => s.selectPlace);
   const selectBuilding = useMapStore((s) => s.selectBuilding);
 
-  // Start over the densest cluster of places (or the area centre).
+  // First mount: start in Chơn Thành centre.
   const home = useMemo<[number, number]>(() => {
-    if (!scene.places.length) return [(bounds.minX + bounds.maxX) / 2, (bounds.minZ + bounds.maxZ) / 2];
-    const pts = scene.places.map((p) => projector.toLocal(p.location.lng, p.location.lat));
-    const best = pts
-      .map((p) => ({ p, n: pts.filter((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 150).length }))
-      .sort((a, b) => b.n - a.n)[0].p;
-    return best;
-  }, [scene.places, projector, bounds]);
+    if (worldFocus.x === 0 && worldFocus.z === 0) {
+      const t = TOWNS[0];
+      const [x, z] = projector.toLocal(t.lng, t.lat);
+      worldFocus.x = x; worldFocus.z = z;
+    }
+    return [worldFocus.x, worldFocus.z];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projector, mode]);
 
   return (
     <Canvas
-      shadows={{ type: THREE.PCFSoftShadowMap }}
-      orthographic
       frameloop="demand"
+      flat
       dpr={[1, 2]}
-      camera={{ position: CAMERA_CONFIG.position, zoom: CAMERA_CONFIG.zoom, near: -2000, far: 4000 }}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
-      onPointerMissed={() => { if (!rest.onGroundClick) { selectPlace(null); selectBuilding(null); } }}
-      style={{ background: PALETTE.background, touchAction: 'none' }}
+      gl={{ antialias: false, powerPreference: 'high-performance' }}
+      onPointerMissed={() => { if (!onGroundClick) { selectPlace(null); selectBuilding(null); } }}
+      style={{ background: STYLE_V2.sky, touchAction: 'none' }}
     >
-      <color attach="background" args={[PALETTE.background]} />
-      <Lighting bounds={bounds} />
-      <MapCamera bounds={bounds} home={home} enabled={controlsEnabled} />
+      <color attach="background" args={[STYLE_V2.sky]} />
+      <ambientLight intensity={1.6} />
+      <directionalLight position={[-200, 400, 150]} intensity={1.2} />
+      {mode === 'iso' ? (
+        <>
+          <OrthographicCamera makeDefault position={[home[0] + CAMERA_CONFIG.position[0], CAMERA_CONFIG.position[1], home[1] + CAMERA_CONFIG.position[2]]} zoom={CAMERA_CONFIG.zoom} near={-3000} far={6000} />
+          <MapCamera bounds={bounds} home={home} />
+        </>
+      ) : (
+        <>
+          <PerspectiveCamera makeDefault fov={FPS_CONFIG.fov} near={0.3} far={900} position={[home[0], FPS_CONFIG.eyeHeightM, home[1]]} />
+          <FirstPersonController area={area} />
+        </>
+      )}
       <Suspense fallback={null}>
-        <MapScene area={area} scene={scene} {...rest} />
+        <ChunkedWorld area={area} showObjects={showObjects} showPins={showPins && mode === 'iso'} interactive={mode === 'iso'} onGroundClick={onGroundClick ?? (() => { selectPlace(null); selectBuilding(null); })} />
+        {agents && <AgentsLayer scale={mode === 'iso' ? 2.3 : 1} density={mode === 'iso' ? 1 : 0.8} />}
+        {children}
       </Suspense>
+      <OutlinePass enabled={outlines} />
       <HoverManager />
-      <ObjectPicker />
+      {mode === 'iso' && <ObjectPicker />}
     </Canvas>
   );
 }
+
+export { THREE };

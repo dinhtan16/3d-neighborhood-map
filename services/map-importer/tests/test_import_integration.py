@@ -76,7 +76,7 @@ def test_file_import_is_idempotent(conn):
     assert second.get("features_inserted", 0) == 0
     assert second.get("places_inserted", 0) == 0
     assert second.get("objects_inserted", 0) == 0
-    assert second["features_updated"] == first["features_road"]
+    assert second["features_updated"] == first.get("features_inserted", 0) + first.get("features_updated", 0)
 
     # Objects face their road: rotation stored in [0, 2π) and every object is published.
     rows = conn.execute(

@@ -31,14 +31,15 @@ export interface AssetInstanceProps {
   onPointerOut?: (e: ThreeEvent<PointerEvent>) => void;
   onClick?: (e: ThreeEvent<MouseEvent>) => void;
   children?: React.ReactNode;
+  placeId?: string | null;
 }
 
 /** A positioned GLB asset; geometry/materials are shared between all instances of the same asset. */
 export const AssetInstance = forwardRef<THREE.Group, AssetInstanceProps>(function AssetInstance(
-  { url, position, rotationY, scale, onPointerOver, onPointerOut, onClick, children }, ref,
+  { url, position, rotationY, scale, onPointerOver, onPointerOut, onClick, children, placeId }, ref,
 ) {
   return (
-    <group ref={ref} position={position} rotation-y={rotationY} scale={scale} onPointerOver={onPointerOver} onPointerOut={onPointerOut} onClick={onClick}>
+    <group ref={ref} position={position} rotation-y={rotationY} scale={scale} userData={placeId ? { placeId } : undefined} onPointerOver={onPointerOver} onPointerOut={onPointerOut} onClick={onClick}>
       <ModelErrorBoundary fallback={placeholder()}>
         <Suspense fallback={placeholder()}>
           <Model url={url} />

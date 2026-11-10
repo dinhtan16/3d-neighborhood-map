@@ -6,6 +6,7 @@ import { APP_CONFIG, AppConfig } from '../../config/env';
 import { resolvePublicUrl } from '../../common/utils/url';
 import { AssetsService } from '../assets/assets.service';
 import { CreateMapObjectDto, UpdateMapObjectDto } from './dto/map-object.dto';
+import { ChunkEnvelope, chunkEnvCte, pointInChunkSql } from '../map/chunk';
 
 const OBJECT_SELECT = `SELECT o.id, o.area_id, o.asset_id, a.asset_key, a.model_url, p.id AS place_id, o.feature_id,
     ST_Y(o.position::geometry) AS lat, ST_X(o.position::geometry) AS lng,
@@ -38,6 +39,20 @@ export class MapObjectsService {
       status: r.status,
       metadata: r.metadata ?? {},
     };
+  }
+
+  /** Published objects whose position lies in the half-open chunk. */
+  async findInChunk(areaId: string, env: ChunkEnvelope, limit: number): Promise<MapObjectDto[]> {
+    const rows = await this.db.query(
+      `WITH ${chunkEnvCte({ x0: 2, x1: 3, nMin: 4, nMax: 5, srid: 6 })}
+       ${OBJECT_SELECT}, e
+       WHERE o.area_id = $1 AND o.deleted_at IS NULL AND o.status = 'published'
+         AND o.position::geometry && e.g
+         AND ${pointInChunkSql('ST_Transform(o.position::geometry, $6::int)', { x0: 2, x1: 3, nMin: 4, nMax: 5 })}
+       ORDER BY o.created_at, o.id LIMIT $7`,
+      [areaId, env.x0, env.x1, env.nMin, env.nMax, env.srid, limit],
+    );
+    return rows.map((r) => this.toDto(r));
   }
 
   async findInBounds(areaId: string, b: GeoBounds, includeDrafts: boolean, limit: number): Promise<MapObjectDto[]> {

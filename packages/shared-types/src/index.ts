@@ -25,5 +25,5 @@ export type Vec3 = [x: number, y: number, z: number];
 export type PlaceStatus = 'active' | 'inactive' | 'pending';
 export type MapObjectStatus = 'draft' | 'published';
 export type ImportJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
-export type FeatureType = 'building' | 'road' | 'park' | 'public_space' | 'water' | 'tree';
-export type DataSource = 'osm' | 'manual';
+export type FeatureType = 'building' | 'road' | 'park' | 'public_space' | 'water' | 'tree' | 'landuse';
+export type DataSource = 'osm' | 'manual' | 'microsoft';

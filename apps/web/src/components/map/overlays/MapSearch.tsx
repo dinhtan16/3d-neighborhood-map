@@ -6,7 +6,7 @@ import { searchPlaces } from '@/lib/api/client';
 import { useMapStore } from '@/features/map/store';
 
 /** Debounced backend search with keyboard-navigable suggestions. Selecting flies the camera to the place. */
-export function MapSearch({ areaId }: { areaId: string }) {
+export function MapSearch({ areaId, onPick }: { areaId: string; onPick?: (p: PlaceSummaryDto) => void }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PlaceSummaryDto[]>([]);
   const [open, setOpen] = useState(false);
@@ -28,7 +28,7 @@ export function MapSearch({ areaId }: { areaId: string }) {
   }, [q, areaId]);
 
   const choose = (p: PlaceSummaryDto) => {
-    selectPlace(p.id, { fly: true });
+    if (onPick) onPick(p); else selectPlace(p.id, { fly: true });
     setQ(p.name);
     setOpen(false);
   };

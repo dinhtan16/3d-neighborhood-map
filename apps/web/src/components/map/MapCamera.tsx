@@ -6,6 +6,13 @@ import { MapControls } from '@react-three/drei';
 import type { MapControls as MapControlsImpl } from 'three-stdlib';
 import { CAMERA_CONFIG } from '@nmap/map-config';
 import { useMapStore } from '@/features/map/store';
+import { CHUNK_LOAD } from '@nmap/map-config';
+import { worldFocus } from './ChunkedWorld';
+
+/** Chunk load radius for the iso view: wider when zoomed out. */
+function isoRadius(zoom: number) {
+  return THREE.MathUtils.clamp(CHUNK_LOAD.isoBaseRadiusM * (4.5 / zoom), 450, 1700);
+}
 
 interface Props {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
@@ -43,8 +50,9 @@ export function MapCamera({ bounds, home, homeZoom = CAMERA_CONFIG.zoom, enabled
     controls.current?.target.copy(target);
     controls.current?.update();
     invalidate();
+    // Re-run when drei swaps in the default camera (first render may see the previous one).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [camera]);
 
   useEffect(() => {
     const c = controls.current;
@@ -71,6 +79,8 @@ export function MapCamera({ bounds, home, homeZoom = CAMERA_CONFIG.zoom, enabled
   }, [command, camera, home, homeZoom, invalidate]);
 
   useFrame((_, dt) => {
+    const c0 = controls.current;
+    if (c0) { worldFocus.x = c0.target.x; worldFocus.z = c0.target.z; worldFocus.radius = isoRadius(camera.zoom); }
     const a = anim.current;
     const c = controls.current;
     if (!a || !c) return;

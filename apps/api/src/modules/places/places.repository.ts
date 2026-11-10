@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { GeoBounds } from '@nmap/shared-types';
 import { DatabaseService, Queryable } from '../../database/database.service';
+import { ChunkEnvelope, chunkEnvCte, pointInChunkSql } from '../map/chunk';
 
 export const PLACE_SUMMARY_COLUMNS = `p.id, p.name, p.slug, p.address, p.status, p.area_id,
   ST_Y(p.location::geometry) AS lat, ST_X(p.location::geometry) AS lng,
@@ -20,6 +21,29 @@ export interface SearchParams {
 @Injectable()
 export class PlacesRepository {
   constructor(private readonly db: DatabaseService) {}
+
+  /** Active places whose point lies in the half-open chunk (projected coordinates). */
+  findInChunk(areaId: string, env: ChunkEnvelope, limit: number) {
+    return this.db.query(
+      `WITH ${chunkEnvCte({ x0: 2, x1: 3, nMin: 4, nMax: 5, srid: 6 })}
+       SELECT ${PLACE_SUMMARY_COLUMNS} ${FROM}, e
+       WHERE p.deleted_at IS NULL AND p.status = 'active' AND p.area_id = $1
+         AND p.location::geometry && e.g
+         AND ${pointInChunkSql('ST_Transform(p.location::geometry, $6::int)', { x0: 2, x1: 3, nMin: 4, nMax: 5 })}
+       ORDER BY p.name, p.id LIMIT $7`,
+      [areaId, env.x0, env.x1, env.nMin, env.nMax, env.srid, limit],
+    );
+  }
+
+  /** Every active place of an area (static demo: region-wide search index). */
+  findAllActive(areaId: string) {
+    return this.db.query(
+      `SELECT ${PLACE_SUMMARY_COLUMNS} ${FROM}
+       WHERE p.deleted_at IS NULL AND p.status = 'active' AND p.area_id = $1
+       ORDER BY p.name, p.id`,
+      [areaId],
+    );
+  }
 
   findInBounds(areaId: string, b: GeoBounds, limit: number) {
     return this.db.query(

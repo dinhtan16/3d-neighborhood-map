@@ -187,3 +187,38 @@ input, select, textarea { font: inherit; color: inherit; }
   .editor { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto; height: auto; }
   .grid-2, .form .two, .form .three { grid-template-columns: 1fr; }
 }
+
+/* ---------- v2: towns, first-person HUD ---------- */
+.towns { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; max-width: 42vw; }
+.towns .chip { white-space: nowrap; }
+.mode-fps .map-area { cursor: crosshair; }
+.fps-hud { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+.crosshair::before, .crosshair::after { content: ''; position: absolute; background: #fffaf2; box-shadow: 0 0 0 1.5px #2b1f2e; border-radius: 2px; }
+.crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+.crosshair::after { top: 8px; left: 0; width: 18px; height: 2px; }
+.fps-location {
+  position: absolute; left: 16px; top: 16px; display: grid; gap: 2px; padding: 10px 14px; border-radius: 14px;
+  background: rgba(43, 31, 46, 0.82); color: #fff6ec; border: 2px solid #2b1f2e; max-width: min(420px, 70vw);
+}
+.fps-location strong { font-size: 16px; }
+.fps-location span { font-size: 12px; opacity: 0.85; }
+.fps-location .badge { justify-self: start; margin-top: 4px; }
+.fps-lock {
+  pointer-events: auto; position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
+  display: grid; gap: 6px; text-align: center; padding: 16px 22px; border-radius: 18px; max-width: min(560px, 90%);
+  background: #fffaf2; color: #2b1f2e; border: 3px solid #2b1f2e; box-shadow: 0 6px 0 #2b1f2e;
+}
+.fps-lock strong { font-size: 18px; }
+.fps-lock span { font-size: 13px; color: #6b5a66; }
+.joystick {
+  pointer-events: auto; position: absolute; left: 24px; bottom: 40px; width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(255, 250, 242, 0.35); border: 3px solid rgba(43, 31, 46, 0.7); touch-action: none;
+}
+.joystick .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: #fffaf2; border: 3px solid #2b1f2e; }
+.look-pad { pointer-events: auto; position: absolute; right: 0; top: 0; bottom: 0; width: 55%; touch-action: none; }
+.ride-btn { pointer-events: auto; position: absolute; right: 24px; bottom: 48px; width: 60px; height: 60px; border-radius: 50%; font-size: 26px; background: #fffaf2; border: 3px solid #2b1f2e; }
+@media (max-width: 760px) {
+  .towns { display: none; }
+  .mode-fps .app, .app.mode-fps { grid-template-rows: var(--header-h) 1fr; }
+}

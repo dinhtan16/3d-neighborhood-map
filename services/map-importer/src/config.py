@@ -38,3 +38,19 @@ def database_url() -> str:
     if not url:
         raise SystemExit("DATABASE_URL is not set (see .env.example)")
     return url
+
+
+# ---------------------------------------------------------------------------
+# Region classification extras (v2). Kept here rather than in
+# packages/map-config/rules.json because only the importer needs them; the
+# frontend styles these by feature_type + kind.
+# ---------------------------------------------------------------------------
+#: landuse=* values imported as feature_type 'landuse' (kind = value)
+LANDUSE_KINDS = frozenset({
+    "residential", "commercial", "retail", "industrial", "farmland", "orchard",
+    "forest", "grass", "meadow", "cemetery", "religious", "plantation",
+})
+#: natural=* area values imported as feature_type 'landuse'
+NATURAL_AREA_KINDS = frozenset({"wood", "scrub"})
+#: waterway=* line values imported as feature_type 'water' (LineString)
+WATERWAY_LINE_KINDS = frozenset({"river", "stream", "canal"})

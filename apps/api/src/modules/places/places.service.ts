@@ -9,6 +9,7 @@ import { APP_CONFIG, AppConfig } from '../../config/env';
 import { decodeCursor, encodeCursor } from '../../common/utils/cursor';
 import { shortSuffix, slugify } from '../../common/utils/text';
 import { resolvePublicUrl } from '../../common/utils/url';
+import type { ChunkEnvelope } from '../map/chunk';
 
 export function toPlaceSummary(r: any): PlaceSummaryDto {
   return {
@@ -29,6 +30,14 @@ export class PlacesService {
     private readonly db: DatabaseService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
+
+  async findInChunk(areaId: string, env: ChunkEnvelope, limit: number): Promise<PlaceSummaryDto[]> {
+    return (await this.repo.findInChunk(areaId, env, limit)).map(toPlaceSummary);
+  }
+
+  async findAllActive(areaId: string): Promise<PlaceSummaryDto[]> {
+    return (await this.repo.findAllActive(areaId)).map(toPlaceSummary);
+  }
 
   async findInBounds(areaId: string, b: GeoBounds, limit: number = LIMITS.maxScenePlaces): Promise<PlaceSummaryDto[]> {
     return (await this.repo.findInBounds(areaId, b, limit)).map(toPlaceSummary);

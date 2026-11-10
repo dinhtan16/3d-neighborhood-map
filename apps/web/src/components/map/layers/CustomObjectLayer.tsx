@@ -26,6 +26,7 @@ export const CustomObjectLayer = memo(function CustomObjectLayer({ objects }: { 
           <group key={object.id}>
             <AssetInstance
               url={object.modelUrl}
+              placeId={placeId}
               position={pos}
               rotationY={transform.rotationY}
               scale={transform.scale}

@@ -43,6 +43,8 @@ export interface MapFeatureProperties {
   roofShape?: string | null;
   kind?: string | null;
   layer?: number | null;
+  /** True when height/levels were estimated (e.g. ML footprints). */
+  estimated?: boolean | null;
 }
 
 export type MapFeature = Feature<Geometry, MapFeatureProperties>;
@@ -203,3 +205,37 @@ export interface LoginRequest { email: string; password: string }
 export interface LoginResponse { accessToken: string; expiresIn: number; user: { email: string; role: 'admin' } }
 
 export type { LatLng, GeoBounds, Scale3, Uuid } from '@nmap/shared-types';
+
+// ---------- Chunk streaming (v2) ----------
+export interface MapChunkDto {
+  chunk: { cx: number; cz: number; sizeM: number; bounds: GeoBounds };
+  features: MapFeatureCollection;
+  objects: MapObjectDto[];
+  places: PlaceSummaryDto[];
+}
+
+export interface MapChunkMeta {
+  areaId: Uuid;
+  cx: number;
+  cz: number;
+  featureCount: number;
+  objectCount: number;
+  placeCount: number;
+}
+
+/** demo-data/<areaSlug>/area.json */
+export interface StaticAreaIndex {
+  generatedAt: string;
+  area: MapAreaDto;
+  categories: PlaceCategoryDto[];
+  assets: MapAssetDto[];
+  places: PlaceSummaryDto[];
+  packs: string[];
+  chunkRange: { minCx: number; maxCx: number; minCz: number; maxCz: number };
+}
+
+/** demo-data/<areaSlug>/packs/p_<px>_<pz>.json */
+export interface StaticChunkPack {
+  chunks: Record<string, MapChunkDto>;
+  placeDetails: Record<string, PlaceDetailDto>;
+}

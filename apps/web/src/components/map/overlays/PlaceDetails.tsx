@@ -1,14 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
-import type { MapFeature, PlaceDetailDto } from '@nmap/map-contracts';
+import type { PlaceDetailDto } from '@nmap/map-contracts';
 import { categoryColor } from '@nmap/map-config';
 import { fetchPlace } from '@/lib/api/client';
 import { useMapStore } from '@/features/map/store';
 
 /** Plain React HTML panel (not WebGL UI). */
-export function PlaceDetails({ buildings }: { buildings: MapFeature[] }) {
+export function PlaceDetails() {
   const placeId = useMapStore((s) => s.selectedPlaceId);
   const buildingId = useMapStore((s) => s.selectedBuildingId);
+  const buildingInfo = useMapStore((s) => s.selectedBuildingInfo);
   const selectPlace = useMapStore((s) => s.selectPlace);
   const selectBuilding = useMapStore((s) => s.selectBuilding);
   const command = useMapStore((s) => s.command);
@@ -28,22 +29,21 @@ export function PlaceDetails({ buildings }: { buildings: MapFeature[] }) {
     return () => { cancelled = true; };
   }, [placeId]);
 
-  const building = buildingId ? buildings.find((b) => b.properties.id === buildingId) : null;
+  const building = buildingId && buildingInfo ? buildingInfo : null;
   if (!placeId && !building) return null;
 
   const close = () => { selectPlace(null); selectBuilding(null); };
 
   if (building) {
-    const p = building.properties;
     return (
       <aside className="details" aria-label="Building details">
-        <button className="close" onClick={close} aria-label="Close">×</button>
-        <p className="eyebrow">Building</p>
-        <h2>{p.name || 'Unnamed building'}</h2>
+        <button className="close" onClick={close} aria-label="Đóng">×</button>
+        <p className="eyebrow">Công trình</p>
+        <h2>{building.name || 'Nhà chưa có tên'}</h2>
         <dl>
-          <dt>Height</dt><dd>{p.height?.toFixed(1)} m</dd>
-          {p.levels && (<><dt>Floors</dt><dd>{p.levels}</dd></>)}
-          <dt>Source</dt><dd>{p.source === 'osm' ? `OpenStreetMap ${p.sourceId ?? ''}` : 'Manual'}</dd>
+          <dt>Chiều cao</dt><dd>~{building.height.toFixed(0)} m</dd>
+          {building.levels && (<><dt>Số tầng</dt><dd>{building.levels} (ước tính)</dd></>)}
+          <dt>Nguồn</dt><dd>OpenStreetMap / Microsoft Building Footprints</dd>
         </dl>
       </aside>
     );
@@ -75,7 +75,6 @@ export function PlaceDetails({ buildings }: { buildings: MapFeature[] }) {
             <dt>Nguồn</dt><dd>{place.source === 'osm' ? 'OpenStreetMap' : 'Admin'}</dd>
           </dl>
           <div className="row">
-            <button className="btn" onClick={() => selectPlace(place.id, { fly: true })}>Zoom tới</button>
             <a className="btn ghost" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${place.location.lat}&mlon=${place.location.lng}#map=19/${place.location.lat}/${place.location.lng}`}>OSM ↗</a>
             <button className="btn ghost" onClick={() => command({ type: 'reset' })}>Reset view</button>
           </div>

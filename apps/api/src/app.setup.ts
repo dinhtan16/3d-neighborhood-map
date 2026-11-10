@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import compression from 'compression';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppConfig, REPO_ROOT } from './config/env';
@@ -15,6 +16,8 @@ export function configureApp(app: NestExpressApplication, config: AppConfig): vo
   );
   app.useGlobalInterceptors(new EnvelopeInterceptor());
   app.useGlobalFilters(new PgExceptionFilter());
+  // gzip/deflate: GeoJSON chunks compress ~5-8x.
+  app.use(compression({ threshold: 1024 }));
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
 

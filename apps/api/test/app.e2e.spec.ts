@@ -8,6 +8,8 @@ import { readConfig } from '../src/config/env';
 import { runSeed } from '../src/database/seeds/seed';
 import { runMigrations } from '../src/database/migrate';
 import { TEST_DB_URL } from './test-env';
+import { createProjector } from '@nmap/geo-core';
+import { CHUNK_SIZE_M } from '@nmap/map-config';
 
 const BBOX = { minLng: 106.599, minLat: 11.416, maxLng: 106.613, maxLat: 11.428 };
 const qs = (o: Record<string, unknown>) => new URLSearchParams(Object.entries(o).map(([k, v]) => [k, String(v)])).toString();
@@ -26,7 +28,7 @@ describe('3D Neighborhood Map API (e2e)', () => {
   beforeAll(async () => {
     db = new Client({ connectionString: TEST_DB_URL });
     await db.connect();
-    areaId = (await db.query(`SELECT id FROM map_areas WHERE slug = 'chon-thanh'`)).rows[0].id;
+    areaId = (await db.query(`SELECT id FROM map_areas WHERE slug = 'chon-thanh-binh-long'`)).rows[0].id;
     categoryId = (await db.query(`SELECT id FROM place_categories WHERE slug = 'market-stalls'`)).rows[0].id;
     // Make sure at least one asset exists even if the GLB manifest has not been generated.
     assetId = (
@@ -81,13 +83,70 @@ describe('3D Neighborhood Map API (e2e)', () => {
     });
   });
 
+  describe('map chunks', () => {
+    const projector = createProjector('EPSG:32648', { lat: 11.535, lng: 106.6225 });
+    const chunkOf = (lng: number, lat: number) => {
+      const [x, z] = projector.toLocal(lng, lat);
+      return [Math.floor(x / CHUNK_SIZE_M), Math.floor(z / CHUNK_SIZE_M)] as const;
+    };
+    const [bcx, bcz] = chunkOf(106.6051, 11.4211); // fixture building centroid
+
+    it('returns the chunk containing the fixture building, cacheable', async () => {
+      const res = await http.get(`/api/v1/map/areas/${areaId}/chunks/${bcx}/${bcz}`).expect(200);
+      expect(res.headers['cache-control']).toBe('public, max-age=300');
+      expect(res.body.meta).toMatchObject({ areaId, cx: bcx, cz: bcz });
+      expect(res.body.data.chunk).toMatchObject({ cx: bcx, cz: bcz, sizeM: CHUNK_SIZE_M });
+      const b = res.body.data.chunk.bounds;
+      expect(b.minLng).toBeLessThan(106.6051);
+      expect(b.maxLng).toBeGreaterThan(106.6051);
+      const ids = res.body.data.features.features.map((f: any) => f.properties.sourceId);
+      expect(ids).toContain('way/test-1');
+    });
+
+    it('assigns each building to exactly one chunk; roads appear in every chunk they cross', async () => {
+      let buildingHits = 0;
+      let roadHits = 0;
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const res = await http.get(`/api/v1/map/areas/chon-thanh-binh-long/chunks/${bcx + dx}/${bcz + dz}`).expect(200);
+          const ids = res.body.data.features.features.map((f: any) => f.properties.sourceId);
+          buildingHits += ids.filter((i: string) => i === 'way/test-1').length;
+          roadHits += ids.filter((i: string) => i === 'way/test-2').length;
+        }
+      }
+      expect(buildingHits).toBe(1);
+      expect(roadHits).toBeGreaterThan(1); // the ~1.1 km fixture road spans several 500 m chunks
+    });
+
+    it('places are assigned by point to a single chunk', async () => {
+      const [pcx, pcz] = chunkOf(106.6061, 11.4221);
+      let hits = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const res = await http.get(`/api/v1/map/areas/${areaId}/chunks/${pcx + dx}/${pcz + dz}`).expect(200);
+          hits += res.body.data.places.filter((p: any) => p.id === fixturePlaceId).length;
+        }
+      }
+      expect(hits).toBe(1);
+    });
+
+    it('rejects chunks outside the area and non-integer indices', async () => {
+      const res = await http.get(`/api/v1/map/areas/${areaId}/chunks/999/0`).expect(400);
+      expect(res.body.message).toMatch(/outside the area/);
+      await http.get(`/api/v1/map/areas/${areaId}/chunks/abc/0`).expect(400);
+      await http.get(`/api/v1/map/areas/no-such-area/chunks/0/0`).expect(404);
+    });
+  });
+
   describe('map', () => {
     it('lists areas with bounds and envelope meta', async () => {
       const res = await http.get('/api/v1/map/areas').expect(200);
       expect(res.body.meta.timestamp).toBeDefined();
-      const area = res.body.data.find((a: any) => a.slug === 'chon-thanh');
-      expect(area).toMatchObject({ crs: 'EPSG:32648', origin: { lat: 11.422, lng: 106.606 } });
-      expect(area.bounds.minLng).toBeCloseTo(106.599);
+      const area = res.body.data.find((a: any) => a.slug === 'chon-thanh-binh-long');
+      expect(area).toMatchObject({ crs: 'EPSG:32648', origin: { lat: 11.535, lng: 106.6225 } });
+      expect(area.bounds.minLng).toBeCloseTo(106.555);
+      // The v1 neighbourhood is kept but no longer served.
+      expect(res.body.data.find((a: any) => a.slug === 'chon-thanh')).toBeUndefined();
     });
 
     it('returns the scene with normalized feature properties', async () => {
@@ -229,7 +288,7 @@ describe('3D Neighborhood Map API (e2e)', () => {
     });
 
     it('rejects objects outside the area boundary', async () => {
-      const res = await http.post('/api/v1/admin/map/objects').set(auth()).send({ ...base(), latitude: 11.5 }).expect(400);
+      const res = await http.post('/api/v1/admin/map/objects').set(auth()).send({ ...base(), latitude: 11.8 }).expect(400); // north of the region
       expect(res.body.message).toBe('Object is outside the area boundary');
     });
 

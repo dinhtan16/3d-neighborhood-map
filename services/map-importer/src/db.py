@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from collections import Counter
 
 import psycopg
@@ -82,16 +83,26 @@ def mark_job(conn, job_id: str, status: str, *, error: str | None = None, stats:
 # ---------------------------------------------------------------------------
 _EXTRACT_TYPE = {"Polygon": 3, "MultiPolygon": 3, "LineString": 2, "MultiLineString": 2, "Point": 1}
 
-UPSERT_FEATURE = """
+STAGE_FEATURES = """
+CREATE TEMP TABLE IF NOT EXISTS stage_features (
+  source_id text PRIMARY KEY, feature_type text, geom text, extract int,
+  props jsonb, height double precision, levels int, style text
+) ON COMMIT DROP
+"""
+
+# One set-based statement per import: validate/repair geometry, keep only
+# features touching the area, upsert on the external identity.
+UPSERT_STAGED = """
 WITH g AS (
-  SELECT ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%(geom)s), 4326)), %(extract)s)) AS mg
-), cleaned AS (
-  SELECT CASE WHEN ST_NumGeometries(mg) = 1 THEN ST_GeometryN(mg, 1) ELSE mg END AS geom FROM g
-)
+  SELECT s.*, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(s.geom), 4326)), s.extract)) AS mg
+  FROM stage_features s
+), c AS (
+  SELECT g.*, CASE WHEN ST_NumGeometries(mg) = 1 THEN ST_GeometryN(mg, 1) ELSE mg END AS gg FROM g
+), a AS (SELECT boundary FROM map_areas WHERE id = %(area_id)s)
 INSERT INTO map_features (area_id, feature_type, source, source_id, geometry, properties, height_m, levels, style_key)
-SELECT %(area_id)s, %(ftype)s, 'osm', %(source_id)s, c.geom, %(props)s, %(height)s, %(levels)s, %(style)s
-FROM cleaned c, map_areas a
-WHERE a.id = %(area_id)s AND NOT ST_IsEmpty(c.geom) AND ST_Intersects(a.boundary, c.geom)
+SELECT %(area_id)s, c.feature_type, %(source)s, c.source_id, c.gg, c.props, c.height, c.levels, c.style
+FROM c, a
+WHERE c.gg IS NOT NULL AND NOT ST_IsEmpty(c.gg) AND ST_Intersects(a.boundary, c.gg)
 ON CONFLICT (source, source_id) WHERE source_id IS NOT NULL DO UPDATE SET
   area_id = EXCLUDED.area_id,
   feature_type = EXCLUDED.feature_type,
@@ -100,47 +111,70 @@ ON CONFLICT (source, source_id) WHERE source_id IS NOT NULL DO UPDATE SET
   height_m = EXCLUDED.height_m,
   levels = EXCLUDED.levels,
   style_key = EXCLUDED.style_key
-RETURNING (xmax = 0) AS inserted
+RETURNING source_id, feature_type, (xmax = 0) AS inserted
+"""
+
+# Drop staged Microsoft footprints that overlap an OSM building by > 30 % of their area.
+DROP_OVERLAPPING_OSM = """
+WITH x AS MATERIALIZED (
+  SELECT source_id, ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(geom), 4326)) AS g FROM stage_features
+), hit AS (
+  SELECT DISTINCT x.source_id
+  FROM x JOIN map_features f
+    ON f.area_id = %(area_id)s AND f.source = 'osm' AND f.feature_type = 'building' AND f.geometry && x.g
+  WHERE ST_Intersects(f.geometry, x.g)
+    AND ST_Area(ST_Intersection(ST_MakeValid(f.geometry), x.g)) > 0.3 * ST_Area(x.g)
+)
+DELETE FROM stage_features s USING hit WHERE s.source_id = hit.source_id
 """
 
 
-def upsert_features(conn, area_id: str, features: list[FeatureRecord], stats: Counter) -> set[str]:
-    kept: set[str] = set()
+def upsert_features(conn, area_id: str, features: list[FeatureRecord], stats: Counter, *,
+                    source: str = "osm", skip_overlapping_osm_buildings: bool = False) -> set[str]:
+    """Bulk upsert via COPY into a temp staging table (tens of thousands of rows per second)."""
+    unique: dict[str, FeatureRecord] = {}
+    for f in features:
+        unique[f.source_id] = f
+    conn.execute(STAGE_FEATURES)
+    conn.execute("TRUNCATE stage_features")
     with conn.cursor() as cur:
-        for f in features:
-            cur.execute(
-                UPSERT_FEATURE,
-                {
-                    "geom": json.dumps(f.geometry),
-                    "extract": _EXTRACT_TYPE[f.geometry["type"]],
-                    "area_id": area_id,
-                    "ftype": f.feature_type,
-                    "source_id": f.source_id,
-                    "props": json.dumps(f.properties, ensure_ascii=False),
-                    "height": f.height_m,
-                    "levels": f.levels,
-                    "style": f.style_key,
-                },
-            )
-            row = cur.fetchone()
-            if row is None:
-                stats["features_outside_area_or_empty"] += 1
-                continue
-            kept.add(f.source_id)
-            stats[f"features_{f.feature_type}"] += 1
-            stats["features_inserted" if row["inserted"] else "features_updated"] += 1
+        with cur.copy("COPY stage_features (source_id, feature_type, geom, extract, props, height, levels, style) FROM STDIN") as cp:
+            for f in unique.values():
+                cp.write_row((
+                    f.source_id, f.feature_type, json.dumps(f.geometry), _EXTRACT_TYPE[f.geometry["type"]],
+                    json.dumps(f.properties, ensure_ascii=False), f.height_m, f.levels, f.style_key,
+                ))
+    if skip_overlapping_osm_buildings:
+        t = time.monotonic()
+        stats["features_skipped_overlapping_osm"] = conn.execute(DROP_OVERLAPPING_OSM, {"area_id": area_id}).rowcount
+        stats["timing_overlap_ms"] = round((time.monotonic() - t) * 1000)
+    staged = conn.execute("SELECT count(*) AS n FROM stage_features").fetchone()["n"]
+    t = time.monotonic()
+    rows = conn.execute(UPSERT_STAGED, {"area_id": area_id, "source": source}).fetchall()
+    stats["timing_upsert_ms"] = round((time.monotonic() - t) * 1000)
+    kept: set[str] = set()
+    for row in rows:
+        kept.add(row["source_id"])
+        stats[f"features_{row['feature_type']}"] += 1
+        stats["features_inserted" if row["inserted"] else "features_updated"] += 1
+    stats["features_outside_area_or_empty"] += staged - len(rows)
     return kept
 
 
-def delete_stale_features(conn, area_id: str, bounds: dict, kept: set[str]) -> int:
-    """Remove OSM features of this area inside the fetched bbox that no longer exist upstream."""
+def delete_stale_features(conn, area_id: str, bounds: dict, kept: set[str], source: str = "osm") -> int:
+    """Remove features of this source inside the fetched bbox that no longer exist upstream."""
+    # OSM: only features entirely inside the fetched bbox (others may extend into
+    # unfetched space). Microsoft: footprints are assigned to a bbox by centroid,
+    # the same rule the loader uses.
+    spatial = ("ST_Intersects(centroid, ST_MakeEnvelope(%s, %s, %s, %s, 4326))" if source == "microsoft"
+               else "ST_CoveredBy(geometry, ST_MakeEnvelope(%s, %s, %s, %s, 4326))")
     rows = conn.execute(
-        """DELETE FROM map_features
-           WHERE area_id = %s AND source = 'osm'
-             AND ST_CoveredBy(geometry, ST_MakeEnvelope(%s, %s, %s, %s, 4326))
+        f"""DELETE FROM map_features
+           WHERE area_id = %s AND source = %s
+             AND {spatial}
              AND NOT (source_id = ANY(%s))
            RETURNING id""",
-        (area_id, bounds["minLng"], bounds["minLat"], bounds["maxLng"], bounds["maxLat"], list(kept)),
+        (area_id, source, bounds["minLng"], bounds["minLat"], bounds["maxLng"], bounds["maxLat"], list(kept)),
     ).fetchall()
     return len(rows)
 
@@ -227,6 +261,7 @@ SELECT f.source_id,
        ST_Distance(ST_Transform(f.geometry, %(srid)s), p.g) AS dist
 FROM map_features f, p
 WHERE f.area_id = %(area_id)s AND f.feature_type = 'road'
+  AND f.geometry && ST_Expand(ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326), 0.0012)
   AND NOT (COALESCE(f.properties->'normalized'->>'highway', '') = ANY(%(exclude)s))
   AND ST_DWithin(ST_Transform(f.geometry, %(srid)s), p.g, %(radius)s)
 ORDER BY dist ASC

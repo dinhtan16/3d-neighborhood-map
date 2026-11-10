@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from config import rules
+from config import LANDUSE_KINDS, NATURAL_AREA_KINDS, WATERWAY_LINE_KINDS, rules
 
 CIVIC_TYPES = {"school", "public", "civic", "government", "hospital", "university"}
 COMMERCIAL_TYPES = {"commercial", "retail", "shop"}
@@ -133,9 +133,17 @@ def classify(tags: dict, element_type: str, closed: bool) -> tuple[str, str | No
                 if key == "landuse" and value in ("grass", "recreation_ground"):
                     return "park", value
                 return "public_space", value
+    if is_area:
+        landuse = tags.get("landuse")
+        if landuse in LANDUSE_KINDS:
+            return "landuse", landuse
+        if tags.get("natural") in NATURAL_AREA_KINDS:
+            return "landuse", tags["natural"]
     highway = tags.get("highway")
     if highway in r["renderedHighways"] and element_type == "way" and tags.get("area") != "yes":
         return "road", highway
+    if element_type == "way" and tags.get("waterway") in WATERWAY_LINE_KINDS:
+        return "water", tags["waterway"]
     return None
 
 

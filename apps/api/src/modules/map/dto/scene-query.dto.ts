@@ -19,3 +19,8 @@ export class ObjectsQueryDto extends BoundsDto {
   @IsOptional() @ToBoolean() @IsBoolean()
   includeDrafts?: boolean;
 }
+
+export class ChunkQueryDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(3)
+  lod?: number;
+}
