@@ -126,6 +126,9 @@ export function MapPage({ areaSlug = DEFAULT_AREA_SLUG, Canvas, adminHref = '/ad
       <main className="map-area">
         {area ? <Canvas area={area} mode={mode} outlines={outlines} agents={agents} /> : <MapLoading error={error} />}
         {mode === 'iso' && <MapToolbar />}
+        {mode === 'iso' && (
+          <div className="map-hint">Kéo chuột: di chuyển · Chuột phải hoặc <kbd>Ctrl</kbd> + kéo: xoay góc nhìn · Lăn chuột: phóng to</div>
+        )}
         {mode === 'fps' && <FpsHud />}
         <PlaceDetails />
         <div className="attribution">

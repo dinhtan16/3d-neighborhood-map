@@ -6,29 +6,38 @@ import { fpsInput } from '../FirstPersonController';
 /** First-person HUD: crosshair, location, controls help, pointer-lock prompt, touch joystick. */
 export function FpsHud() {
   const loc = useWorldStatus((s) => s.location);
-  const [locked, setLocked] = useState(false);
   const [ride, setRide] = useState(false);
+  const [view, setView] = useState<'third' | 'first'>('third');
   const [touch, setTouch] = useState(false);
+  const [help, setHelp] = useState(true);
 
   useEffect(() => {
     setTouch(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches);
-    const id = setInterval(() => { setLocked(fpsInput.locked); setRide(fpsInput.ride); }, 200);
-    return () => clearInterval(id);
+    const id = setInterval(() => { setRide(fpsInput.ride); setView(fpsInput.view); }, 150);
+    const t = setTimeout(() => setHelp(false), 12000);
+    return () => { clearInterval(id); clearTimeout(t); };
   }, []);
 
   return (
     <div className="fps-hud">
-      <div className="crosshair" aria-hidden />
+      {view === 'first' && <div className="crosshair" aria-hidden />}
       <div className="fps-location">
-        <strong>{loc?.road ?? 'Đang đi…'}</strong>
+        <strong>{loc?.road ?? 'Đang đi dạo…'}</strong>
         <span>{loc?.town ? `${loc.town} · ` : ''}{loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}` : ''}</span>
-        {ride && <span className="badge">🛵 Đi xe máy</span>}
       </div>
-      {!touch && !locked && (
-        <button id="fps-lock" className="fps-lock">
-          <strong>Bấm để bắt đầu đi bộ</strong>
-          <span>W A S D / mũi tên: di chuyển · Chuột: nhìn · Shift: chạy · R: xe máy · Click: xem cửa hàng · Esc: thoát chuột</span>
-        </button>
+      <div className="fps-actions">
+        <button className={`btn ${ride ? '' : 'ghost'}`} onClick={() => { fpsInput.ride = !fpsInput.ride; }}>{ride ? '🚶 Xuống xe' : '🛵 Lên xe máy'} <kbd>R</kbd></button>
+        <button className="btn ghost" onClick={() => { fpsInput.view = fpsInput.view === 'third' ? 'first' : 'third'; }}>{view === 'third' ? '👁 Góc nhìn thứ nhất' : '🧍 Góc nhìn thứ ba'} <kbd>V</kbd></button>
+        <button className="btn ghost" onClick={() => setHelp((h) => !h)}>?</button>
+      </div>
+      {help && !touch && (
+        <div className="fps-help">
+          <strong>Điều khiển</strong>
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> hoặc phím mũi tên: đi</span>
+          <span>Kéo chuột: xoay góc nhìn · Lăn chuột: gần / xa</span>
+          <span><kbd>Shift</kbd>: chạy · <kbd>R</kbd>: lên / xuống xe máy · <kbd>V</kbd>: đổi góc nhìn</span>
+          <span>Click vào cửa hàng: xem thông tin</span>
+        </div>
       )}
       {touch && <TouchControls />}
     </div>
@@ -72,7 +81,6 @@ function TouchControls() {
         }}
         onPointerUp={() => { lookStart.current = null; }}
       />
-      <button className="ride-btn" onClick={() => { fpsInput.ride = !fpsInput.ride; }}>🛵</button>
     </>
   );
 }

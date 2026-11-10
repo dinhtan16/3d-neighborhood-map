@@ -114,6 +114,9 @@ export function buildingMaterial(): THREE.ShaderMaterial {
       }
       vec3 pick(float s, vec3 a, vec3 b, vec3 c, vec3 d) { return s < 0.25 ? a : s < 0.5 ? b : s < 0.75 ? c : d; }
       void main() {
+        // vSeed is constant per building, but interpolation adds ~1e-7 jitter that the
+        // hash amplifies into per-pixel noise: quantise it first.
+        float sd = floor(vSeed * 1000.0 + 0.5) / 1000.0;
         vec3 base = vColor;
         vec3 col = base;
         if (vRoof < 0.5) {
@@ -123,9 +126,9 @@ export function buildingMaterial(): THREE.ShaderMaterial {
           vec3 trim = mix(base, vec3(1.0, 0.96, 0.9), 0.55);
           if (floorIdx < 0.5) {
             // ground floor: roll-up shutter or glass shopfront + coloured sign band
-            vec3 shutter = pick(vSeed, vec3(0.45, 0.58, 0.70), vec3(0.36, 0.66, 0.58), vec3(0.86, 0.50, 0.40), vec3(0.62, 0.58, 0.68));
-            vec3 sign = pick(fract(vSeed * 7.3), vec3(0.94, 0.30, 0.25), vec3(0.18, 0.55, 0.85), vec3(0.98, 0.78, 0.22), vec3(0.20, 0.62, 0.42));
-            float open = step(0.5, hash(vec2(cellIdx, vSeed * 31.0)));
+            vec3 shutter = pick(sd, vec3(0.45, 0.58, 0.70), vec3(0.36, 0.66, 0.58), vec3(0.86, 0.50, 0.40), vec3(0.62, 0.58, 0.68));
+            vec3 sign = pick(fract(sd * 7.3), vec3(0.94, 0.30, 0.25), vec3(0.18, 0.55, 0.85), vec3(0.98, 0.78, 0.22), vec3(0.20, 0.62, 0.42));
+            float open = step(0.5, hash(vec2(cellIdx, sd * 31.0)));
             float opening = box(p, vec2(0.07, 0.0), vec2(0.93, 0.70));
             vec3 inside = open > 0.5 ? mix(vec3(0.32, 0.26, 0.30), uGlass, step(0.35, p.y) * 0.6) : shutter * (0.9 + 0.1 * step(0.5, fract(p.y * 9.0)));
             col = mix(col, trim, box(p, vec2(0.04, 0.0), vec2(0.96, 0.73)));
@@ -133,7 +136,7 @@ export function buildingMaterial(): THREE.ShaderMaterial {
             col = mix(col, sign, box(p, vec2(0.0, 0.77), vec2(1.0, 0.95)));
             col = mix(col, vec3(1.0, 0.97, 0.9), box(p, vec2(0.2, 0.83), vec2(0.8, 0.89)) * 0.85); // sign lettering band
           } else {
-            float skip = step(hash(vec2(cellIdx, floorIdx) + vSeed * 17.0), 0.15);
+            float skip = step(hash(vec2(cellIdx, floorIdx) + sd * 17.0), 0.15);
             float frame = box(p, vec2(0.22, 0.24), vec2(0.78, 0.80));
             float glass = box(p, vec2(0.27, 0.29), vec2(0.73, 0.75));
             float mull = box(p, vec2(0.485, 0.29), vec2(0.515, 0.75));
@@ -144,7 +147,7 @@ export function buildingMaterial(): THREE.ShaderMaterial {
             col = mix(col, w, frame * (1.0 - skip));
             col = mix(col, trim, box(p, vec2(0.18, 0.18), vec2(0.82, 0.235)) * (1.0 - skip)); // sill
             // balcony rail on some buildings
-            if (vSeed > 0.55) {
+            if (sd > 0.55) {
               float rail = box(p, vec2(0.12, 0.0), vec2(0.88, 0.035)) + box(p, vec2(0.12, 0.15), vec2(0.88, 0.18));
               float bars = box(vec2(fract(p.x * 8.0), p.y), vec2(0.42, 0.0), vec2(0.58, 0.17)) * box(p, vec2(0.12, 0.0), vec2(0.88, 0.17));
               col = mix(col, vec3(0.24, 0.19, 0.25), clamp(rail + bars, 0.0, 1.0));

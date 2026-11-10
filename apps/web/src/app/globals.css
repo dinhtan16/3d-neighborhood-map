@@ -222,3 +222,16 @@ input, select, textarea { font: inherit; color: inherit; }
   .towns { display: none; }
   .mode-fps .app, .app.mode-fps { grid-template-rows: var(--header-h) 1fr; }
 }
+.fps-actions { pointer-events: auto; position: absolute; right: 16px; top: 16px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 60%; }
+.fps-actions .btn { box-shadow: 0 3px 0 #2b1f2e; border-color: #2b1f2e; }
+.fps-actions .btn.ghost { background: #fffaf2; }
+kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; border: 1.5px solid currentColor; border-bottom-width: 3px; border-radius: 6px; font: 600 11px/1.5 ui-monospace, monospace; text-align: center; opacity: 0.85; }
+.fps-help {
+  position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: grid; gap: 4px; padding: 12px 18px;
+  background: rgba(255, 250, 242, 0.94); color: #2b1f2e; border: 3px solid #2b1f2e; border-radius: 16px; box-shadow: 0 5px 0 #2b1f2e; font-size: 13px; max-width: min(560px, 92%);
+}
+.fps-help strong { font-size: 15px; }
+.mode-fps .look-pad { display: none; }
+@media (pointer: coarse) { .mode-fps .look-pad { display: block; } }
+.map-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: 34px; z-index: 5; padding: 5px 12px; border-radius: 99px; background: rgba(43, 31, 46, 0.78); color: #fff6ec; font-size: 12px; pointer-events: none; white-space: nowrap; }
+@media (max-width: 760px) { .map-hint { display: none; } }

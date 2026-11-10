@@ -75,7 +75,7 @@ export function OutlinePass({ enabled = true, thickness = 1.25 }: { enabled?: bo
             f0 = 1.0 / d0; fl = 1.0 / linDepth(vUv + offs[1]); fr = 1.0 / linDepth(vUv + offs[0]); fu = 1.0 / linDepth(vUv + offs[2]); fd = 1.0 / linDepth(vUv + offs[3]);
           }
           float lap = (abs(fl + fr - 2.0 * f0) + abs(fu + fd - 2.0 * f0)) / max(abs(f0), 1e-6);
-          float dEdge = uOrtho > 0.5 ? smoothstep(0.0015, 0.004, lap * 0.02) : smoothstep(0.03, 0.08, lap);
+          float dEdge = uOrtho > 0.5 ? smoothstep(0.0015, 0.004, lap * 0.02) : smoothstep(0.18, 0.4, lap);
           float edge = max(smoothstep(0.35, 0.8, nEdge), dEdge);
           // fade outlines in the far distance (perspective)
           if (uOrtho < 0.5) edge *= 1.0 - smoothstep(220.0, 480.0, d0);
