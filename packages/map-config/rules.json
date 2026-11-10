@@ -1,0 +1,228 @@
+{
+  "$comment": "Single source of truth for geometry rules. Read by packages/map-config (TS) and services/map-importer (Python).",
+  "buildingHeight": {
+    "floorHeightM": 3.5,
+    "unknownDefaultM": 6,
+    "minHeightM": 2.5,
+    "maxHeightM": 200
+  },
+  "roadWidthsM": {
+    "motorway": 14,
+    "trunk": 12,
+    "primary": 11,
+    "primary_link": 7,
+    "secondary": 9,
+    "secondary_link": 6,
+    "tertiary": 7.5,
+    "tertiary_link": 5,
+    "unclassified": 6,
+    "residential": 6,
+    "living_street": 4.5,
+    "service": 3.5,
+    "pedestrian": 4,
+    "footway": 2,
+    "path": 1.5,
+    "steps": 2,
+    "cycleway": 2,
+    "construction": 5,
+    "default": 4
+  },
+  "sidewalkWidthM": {
+    "motorway": 0,
+    "trunk": 3,
+    "primary": 3,
+    "primary_link": 2,
+    "secondary": 2.5,
+    "secondary_link": 1.5,
+    "tertiary": 2,
+    "residential": 1.2,
+    "unclassified": 1.2,
+    "default": 0
+  },
+  "roadsWithCenterLine": [
+    "motorway",
+    "trunk",
+    "primary",
+    "secondary",
+    "tertiary"
+  ],
+  "renderedHighways": [
+    "motorway",
+    "trunk",
+    "primary",
+    "primary_link",
+    "secondary",
+    "secondary_link",
+    "tertiary",
+    "tertiary_link",
+    "unclassified",
+    "residential",
+    "living_street",
+    "service",
+    "pedestrian",
+    "footway",
+    "path",
+    "steps",
+    "cycleway",
+    "construction"
+  ],
+  "publicSpaceTags": {
+    "leisure": [
+      "park",
+      "garden",
+      "playground",
+      "pitch",
+      "sports_centre"
+    ],
+    "amenity": [
+      "marketplace",
+      "parking",
+      "school"
+    ],
+    "landuse": [
+      "grass",
+      "recreation_ground"
+    ],
+    "place": [
+      "square"
+    ],
+    "highway": [
+      "pedestrian"
+    ]
+  },
+  "categories": [
+    {
+      "slug": "food-beverage",
+      "name": "Food & Beverage",
+      "icon": "utensils",
+      "color": "#e8735a",
+      "sortOrder": 1
+    },
+    {
+      "slug": "grocery",
+      "name": "Grocery",
+      "icon": "basket",
+      "color": "#7fb069",
+      "sortOrder": 2
+    },
+    {
+      "slug": "retail",
+      "name": "Retail",
+      "icon": "bag",
+      "color": "#5b8bd6",
+      "sortOrder": 3
+    },
+    {
+      "slug": "services",
+      "name": "Services",
+      "icon": "wrench",
+      "color": "#9b6fc4",
+      "sortOrder": 4
+    },
+    {
+      "slug": "market-stalls",
+      "name": "Market Stalls",
+      "icon": "store",
+      "color": "#f2b544",
+      "sortOrder": 5
+    },
+    {
+      "slug": "other",
+      "name": "Other",
+      "icon": "pin",
+      "color": "#8a7f72",
+      "sortOrder": 6
+    }
+  ],
+  "osmCategoryMapping": {
+    "amenity": {
+      "restaurant": "food-beverage",
+      "cafe": "food-beverage",
+      "fast_food": "food-beverage",
+      "bar": "food-beverage",
+      "pub": "food-beverage",
+      "food_court": "food-beverage",
+      "ice_cream": "food-beverage",
+      "marketplace": "market-stalls",
+      "bank": "services",
+      "atm": "services",
+      "pharmacy": "services",
+      "clinic": "services",
+      "car_wash": "services",
+      "fuel": "services",
+      "post_office": "services",
+      "dentist": "services",
+      "doctors": "services",
+      "internet_cafe": "services",
+      "karaoke_box": "services",
+      "police": "other",
+      "school": "other",
+      "kindergarten": "other",
+      "hospital": "services",
+      "place_of_worship": "other"
+    },
+    "shop": {
+      "convenience": "grocery",
+      "supermarket": "grocery",
+      "greengrocer": "grocery",
+      "bakery": "grocery",
+      "butcher": "grocery",
+      "seafood": "grocery",
+      "beverages": "grocery",
+      "hairdresser": "services",
+      "beauty": "services",
+      "laundry": "services",
+      "car_repair": "services",
+      "motorcycle_repair": "services",
+      "tailor": "services"
+    },
+    "shopFallback": "retail",
+    "tourism": {
+      "guest_house": "services",
+      "hotel": "services",
+      "motel": "services"
+    }
+  },
+  "poiAmenities": [
+    "atm",
+    "bank",
+    "bar",
+    "cafe",
+    "car_wash",
+    "clinic",
+    "dentist",
+    "doctors",
+    "fast_food",
+    "food_court",
+    "fuel",
+    "hospital",
+    "ice_cream",
+    "internet_cafe",
+    "karaoke_box",
+    "kindergarten",
+    "marketplace",
+    "pharmacy",
+    "place_of_worship",
+    "police",
+    "post_office",
+    "pub",
+    "restaurant",
+    "school"
+  ],
+  "buildingStyles": [
+    "residential-coral",
+    "residential-cream",
+    "residential-mint",
+    "residential-peach",
+    "shophouse-terracotta",
+    "civic-sand"
+  ],
+  "limits": {
+    "maxBboxAreaDeg2": 0.0025,
+    "maxSceneFeatures": 5000,
+    "maxSceneObjects": 2000,
+    "maxScenePlaces": 1000,
+    "maxSearchResults": 50,
+    "maxNearbyRadiusM": 5000
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@nmap/map-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@nmap/shared-types": "workspace:*" },
+  "devDependencies": { "typescript": "^5.6.3", "@types/geojson": "^7946.0.14" }
+}
